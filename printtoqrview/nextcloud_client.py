@@ -48,6 +48,13 @@ def create_public_link(remote_path: str, cfg: Config) -> str:
     if resp.status_code not in (200, 201):
         raise NextcloudError(f"Share-Erstellung fehlgeschlagen ({resp.status_code}): {resp.text[:200]}")
     try:
-        return resp.json()["ocs"]["data"]["url"]
+        share_url = resp.json()["ocs"]["data"]["url"]
     except (KeyError, ValueError, TypeError) as exc:
         raise NextcloudError(f"Unerwartete Antwort der Share-API: {resp.text[:200]}") from exc
+
+    # Der reine Share-Link (".../s/TOKEN") liefert die HTML-Vorschauseite der
+    # Nextcloud-Weboberfläche. Mit angehängtem "/download" antwortet der Server
+    # stattdessen mit "Content-Disposition: attachment", sodass Browser die
+    # Datei direkt herunterladen bzw. im Handy-PDF-Viewer öffnen, statt sie
+    # zuerst im Web-Cloud-Viewer anzuzeigen.
+    return f"{share_url.rstrip('/')}/download"
