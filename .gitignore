@@ -10,3 +10,6 @@ __pycache__/
 
 # Claude Code session data
 .claude/
+
+# Lokale Test-PDF
+testdruck.pdf

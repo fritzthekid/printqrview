@@ -17,8 +17,10 @@ CFG = Config(
 )
 
 
+@patch("printtoqrview.nextcloud_client.requests.request")
 @patch("printtoqrview.nextcloud_client.requests.put")
-def test_upload_pdf_success(mock_put):
+def test_upload_pdf_success(mock_put, mock_request):
+    mock_request.return_value = MagicMock(status_code=201, text="")
     mock_put.return_value = MagicMock(status_code=201, text="")
     remote_path = upload_pdf(b"%PDF-1.4 ...", "20260907-143005_test.pdf", CFG)
 
@@ -32,10 +34,42 @@ def test_upload_pdf_success(mock_put):
     assert mock_put.call_args.kwargs["data"] == b"%PDF-1.4 ..."
 
 
+@patch("printtoqrview.nextcloud_client.requests.request")
 @patch("printtoqrview.nextcloud_client.requests.put")
-def test_upload_pdf_failure_raises(mock_put):
+def test_upload_pdf_failure_raises(mock_put, mock_request):
+    mock_request.return_value = MagicMock(status_code=201, text="")
     mock_put.return_value = MagicMock(status_code=507, text="Insufficient Storage")
     with pytest.raises(NextcloudError, match="Upload fehlgeschlagen"):
+        upload_pdf(b"data", "file.pdf", CFG)
+
+
+@patch("printtoqrview.nextcloud_client.requests.request")
+@patch("printtoqrview.nextcloud_client.requests.put")
+def test_upload_creates_target_dir(mock_put, mock_request):
+    mock_request.return_value = MagicMock(status_code=201, text="")
+    mock_put.return_value = MagicMock(status_code=201, text="")
+
+    upload_pdf(b"data", "file.pdf", CFG)
+
+    method, url = mock_request.call_args.args[0], mock_request.call_args.args[1]
+    assert method == "MKCOL"
+    assert url == "https://cloud.orthos.selfhost.eu/remote.php/dav/files/printer/PrinterUploads"
+
+
+@patch("printtoqrview.nextcloud_client.requests.request")
+@patch("printtoqrview.nextcloud_client.requests.put")
+def test_existing_target_dir_is_tolerated(mock_put, mock_request):
+    # 405 = Ordner existiert bereits -> darf nicht als Fehler durchschlagen
+    mock_request.return_value = MagicMock(status_code=405, text="Method Not Allowed")
+    mock_put.return_value = MagicMock(status_code=201, text="")
+
+    assert upload_pdf(b"data", "file.pdf", CFG) == "/PrinterUploads/file.pdf"
+
+
+@patch("printtoqrview.nextcloud_client.requests.request")
+def test_target_dir_creation_failure_raises(mock_request):
+    mock_request.return_value = MagicMock(status_code=403, text="Forbidden")
+    with pytest.raises(NextcloudError, match="Zielordner"):
         upload_pdf(b"data", "file.pdf", CFG)
 
 

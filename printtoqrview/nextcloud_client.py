@@ -10,7 +10,28 @@ class NextcloudError(RuntimeError):
     """Wird bei fehlgeschlagenem Upload oder fehlgeschlagener Share-Erstellung geworfen."""
 
 
+def _ensure_remote_dir(cfg: Config) -> None:
+    """Legt das Zielverzeichnis (inkl. Zwischenebenen) per WebDAV MKCOL an.
+
+    Nextcloud legt bei einem PUT keine fehlenden Elternordner an, deshalb muss
+    das Zielverzeichnis vorher existieren. Ein bereits vorhandener Ordner meldet
+    sich mit 405 (Method Not Allowed) und wird bewusst ignoriert.
+    """
+    path = ""
+    for segment in cfg.target_dir.strip("/").split("/"):
+        if not segment:
+            continue
+        path = f"{path}/{segment}"
+        url = f"{cfg.base_url}/remote.php/dav/files/{cfg.username}{path}"
+        resp = requests.request("MKCOL", url, auth=(cfg.username, cfg.password), timeout=30)
+        if resp.status_code not in (201, 405):
+            raise NextcloudError(
+                f"Anlegen des Zielordners fehlgeschlagen ({resp.status_code}): {resp.text[:200]}"
+            )
+
+
 def upload_pdf(pdf_bytes: bytes, filename: str, cfg: Config) -> str:
+    _ensure_remote_dir(cfg)
     remote_path = f"{cfg.target_dir.rstrip('/')}/{filename}"
     url = f"{cfg.base_url}/remote.php/dav/files/{cfg.username}{remote_path}"
     resp = requests.put(url, data=pdf_bytes, auth=(cfg.username, cfg.password), timeout=30)
