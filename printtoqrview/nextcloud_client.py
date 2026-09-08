@@ -1,6 +1,8 @@
 """Upload per WebDAV (R4) und Erzeugung eines öffentlichen Links per OCS-API (R5)."""
 from __future__ import annotations
 
+from datetime import date, timedelta
+
 import requests
 
 from .config import Config
@@ -40,10 +42,17 @@ def upload_pdf(pdf_bytes: bytes, filename: str, cfg: Config) -> str:
     return remote_path
 
 
+# `upload_pdf` ist inhaltsagnostisch (reines WebDAV-PUT von Bytes) und eignet
+# sich unverändert für beliebige Dateien – `upload_file` ist der sprechende
+# Name dafür, z. B. in sendfile.py.
+upload_file = upload_pdf
+
+
 def create_public_link(remote_path: str, cfg: Config) -> str:
     url = f"{cfg.base_url}/ocs/v2.php/apps/files_sharing/api/v1/shares"
     headers = {"OCS-APIRequest": "true", "Accept": "application/json"}
-    data = {"path": remote_path, "shareType": 3}
+    expire_date = (date.today() + timedelta(days=cfg.link_expire_days)).isoformat()
+    data = {"path": remote_path, "shareType": 3, "expireDate": expire_date}
     resp = requests.post(url, headers=headers, data=data, auth=(cfg.username, cfg.password), timeout=30)
     if resp.status_code not in (200, 201):
         raise NextcloudError(f"Share-Erstellung fehlgeschlagen ({resp.status_code}): {resp.text[:200]}")

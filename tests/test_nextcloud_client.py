@@ -1,3 +1,4 @@
+from datetime import date, timedelta
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -81,11 +82,42 @@ def test_create_public_link_success(mock_post):
     )
     url = create_public_link("/PrinterUploads/file.pdf", CFG)
 
-    assert url == "https://cloud.orthos.selfhost.eu/s/abc123"
+    assert url == "https://cloud.orthos.selfhost.eu/s/abc123/download"
     call_kwargs = mock_post.call_args.kwargs
     assert call_kwargs["data"]["shareType"] == 3
     assert call_kwargs["data"]["path"] == "/PrinterUploads/file.pdf"
     assert call_kwargs["headers"]["OCS-APIRequest"] == "true"
+
+
+@patch("printtoqrview.nextcloud_client.requests.post")
+def test_create_public_link_sets_expire_date(mock_post):
+    mock_post.return_value = MagicMock(
+        status_code=200,
+        json=lambda: {"ocs": {"data": {"url": "https://cloud.orthos.selfhost.eu/s/abc123"}}},
+    )
+    create_public_link("/PrinterUploads/file.pdf", CFG)
+
+    expected = (date.today() + timedelta(days=1)).isoformat()
+    assert mock_post.call_args.kwargs["data"]["expireDate"] == expected
+
+
+@patch("printtoqrview.nextcloud_client.requests.post")
+def test_create_public_link_respects_custom_expire_days(mock_post):
+    mock_post.return_value = MagicMock(
+        status_code=200,
+        json=lambda: {"ocs": {"data": {"url": "https://cloud.orthos.selfhost.eu/s/abc123"}}},
+    )
+    cfg = Config(
+        base_url=CFG.base_url,
+        username=CFG.username,
+        password=CFG.password,
+        target_dir=CFG.target_dir,
+        link_expire_days=7,
+    )
+    create_public_link("/PrinterUploads/file.pdf", cfg)
+
+    expected = (date.today() + timedelta(days=7)).isoformat()
+    assert mock_post.call_args.kwargs["data"]["expireDate"] == expected
 
 
 @patch("printtoqrview.nextcloud_client.requests.post")

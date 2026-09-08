@@ -27,3 +27,15 @@ def test_two_calls_at_different_times_are_unique():
     name1 = generate_filename("Test", timestamp=datetime(2026, 1, 1, 0, 0, 0))
     name2 = generate_filename("Test", timestamp=datetime(2026, 1, 1, 0, 0, 1))
     assert name1 != name2
+
+
+def test_custom_extension_is_used():
+    ts = datetime(2026, 9, 7, 14, 30, 5)
+    name = generate_filename("test", ext=".zip", timestamp=ts)
+    assert name == "20260907-143005_test.zip"
+
+
+def test_extension_without_leading_dot_is_normalized():
+    ts = datetime(2026, 9, 7, 14, 30, 5)
+    name = generate_filename("test", ext="zip", timestamp=ts)
+    assert name == "20260907-143005_test.zip"

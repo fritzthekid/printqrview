@@ -19,6 +19,7 @@ PDF vor – wir müssen also keine PostScript/PCL-Interpretation selbst machen.
 | `NC_USERNAME` | ja | Nextcloud-Benutzer (für Upload + Freigabe) |
 | `NC_PASSWORD` | ja | Nextcloud **App-Passwort** (nicht das Konto-Passwort!) |
 | `NC_TARGET_DIR` | nein | Zielordner, Default `/PrinterUploads` |
+| `NC_LINK_EXPIRE_DAYS` | nein | Gültigkeitsdauer des Freigabelinks in Tagen, Default `1` |
 
 ## Lokal testen
 
@@ -28,6 +29,22 @@ export NC_USERNAME=printer
 export NC_PASSWORD=<app-passwort>
 cat testdruck.pdf | python3 -m printtoqrview.backend job1 eduard "Testdruck" 1 ""
 ```
+
+## Beliebige Dateien teilen (ohne Drucker)
+
+Neben dem CUPS-Backend gibt es `sendfile` als einfache CLI für den Fall, dass
+man keine Druckdaten hat, sondern direkt eine beliebige Datei (z. B. eine ZIP)
+über denselben Weg (Nextcloud-Upload + Freigabelink + QR-Code) teilen will:
+
+```bash
+python3 -m printtoqrview.sendfile pfad/zu/test.zip
+python3 -m printtoqrview.sendfile pfad/zu/test.zip "Anderer Titel.zip"
+cat test.zip | python3 -m printtoqrview.sendfile - test.zip
+```
+
+Ohne Label wird der Dateiname aus dem Pfad übernommen (inkl. Endung); bei
+stdin (`-`) muss das Label die Endung liefern, sonst wird `.bin` verwendet.
+Nutzt dieselbe Konfiguration (`NC_*`-Umgebungsvariablen) wie das Backend.
 
 ## Einbindung in CUPS (nächster Schritt, noch nicht Teil dieses Prototyps)
 

@@ -11,6 +11,7 @@ class Config:
     username: str
     password: str
     target_dir: str = "/PrinterUploads"
+    link_expire_days: int = 1
 
     @staticmethod
     def from_env(env: dict | None = None) -> "Config":
@@ -25,4 +26,5 @@ class Config:
             username=env["NC_USERNAME"],
             password=env["NC_PASSWORD"],
             target_dir=env.get("NC_TARGET_DIR", "/PrinterUploads"),
+            link_expire_days=int(env.get("NC_LINK_EXPIRE_DAYS", "1")),
         )

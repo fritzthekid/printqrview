@@ -27,6 +27,27 @@ def test_from_env_uses_default_target_dir():
     assert cfg.target_dir == "/PrinterUploads"
 
 
+def test_from_env_uses_default_link_expire_days():
+    env = {
+        "NC_BASE_URL": "https://cloud.example.com",
+        "NC_USERNAME": "printer",
+        "NC_PASSWORD": "app-token",
+    }
+    cfg = Config.from_env(env)
+    assert cfg.link_expire_days == 1
+
+
+def test_from_env_reads_custom_link_expire_days():
+    env = {
+        "NC_BASE_URL": "https://cloud.example.com",
+        "NC_USERNAME": "printer",
+        "NC_PASSWORD": "app-token",
+        "NC_LINK_EXPIRE_DAYS": "7",
+    }
+    cfg = Config.from_env(env)
+    assert cfg.link_expire_days == 7
+
+
 @pytest.mark.parametrize("missing_key", ["NC_BASE_URL", "NC_USERNAME", "NC_PASSWORD"])
 def test_from_env_raises_on_missing_required_var(missing_key):
     env = {
