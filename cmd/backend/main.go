@@ -42,7 +42,16 @@ func readPDFData(argv []string, stdin io.Reader) ([]byte, error) {
 	return io.ReadAll(stdin)
 }
 
+// discoveryLine ist die Antwort auf den CUPS-Geräteerkennungsaufruf (0
+// Argumente), wie sie z. B. "lpinfo -v" auswertet:
+// https://www.cups.org/doc/man-backend.html
+const discoveryLine = `network nextcloud:/ "Unknown" "Nextcloud QR-Drucker" "Lädt PDF nach Nextcloud hoch und erzeugt einen QR-Code-Freigabelink"`
+
 func run(argv []string, cfg *config.Config, out func(string) error, stdin io.Reader) int {
+	if len(argv) == 1 {
+		fmt.Println(discoveryLine)
+		return 0
+	}
 	if len(argv) < 6 {
 		fmt.Fprintln(os.Stderr, "Aufruf: backend job-id user title copies options [file]")
 		return 1
@@ -108,5 +117,14 @@ func reportError(err error) int {
 }
 
 func main() {
+	// "tmp" ist relativ zum Arbeitsverzeichnis des Prozesses; unter CUPS ist
+	// das nicht das Projektverzeichnis, deshalb per Env-Var überschreibbar
+	// (siehe deploy/backend.env.example).
+	if dir := os.Getenv("PRINTTOQRVIEW_OUTPUT_DIR"); dir != "" {
+		output.Dir = dir
+	}
+	if hook := os.Getenv("PRINTTOQRVIEW_DISPLAY_HOOK"); hook != "" {
+		output.Hook = hook
+	}
 	os.Exit(run(os.Args, nil, nil, nil))
 }

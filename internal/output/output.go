@@ -8,6 +8,7 @@ package output
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"time"
 
@@ -17,8 +18,14 @@ import (
 // Dir ist das Ausgabeverzeichnis; Tests können es umbiegen.
 var Dir = "tmp"
 
-// Default schreibt link als Zeile in Dir/links.log und rendert ihn zusätzlich
-// als QR-Code-PNG in Dir.
+// Hook ist ein optionales externes Skript, das nach dem Schreiben von PNG +
+// Log-Zeile als `Hook <png-pfad> <link>` aufgerufen wird - z. B. um den
+// QR-Code auf einem angeschlossenen Display auszugeben (siehe raspi/).
+// Leer (Default) bedeutet: kein Hook.
+var Hook = ""
+
+// Default schreibt link als Zeile in Dir/links.log, rendert ihn zusätzlich
+// als QR-Code-PNG in Dir und ruft danach - falls gesetzt - Hook auf.
 func Default(link string) error {
 	if err := os.MkdirAll(Dir, 0o755); err != nil {
 		return err
@@ -35,5 +42,24 @@ func Default(link string) error {
 	}
 
 	pngPath := filepath.Join(Dir, now.Format("20060102-150405")+".png")
-	return qrview.WritePNG(link, pngPath)
+	if err := qrview.WritePNG(link, pngPath); err != nil {
+		return err
+	}
+
+	if Hook != "" {
+		runHook(pngPath, link)
+	}
+	return nil
+}
+
+// runHook ruft Hook auf, meldet einen Fehlschlag aber nur als Warnung: Link +
+// QR-PNG sind zu diesem Zeitpunkt bereits erfolgreich abgelegt, ein
+// nicht erreichbares Display soll den Druckjob nicht scheitern lassen.
+func runHook(pngPath, link string) {
+	cmd := exec.Command(Hook, pngPath, link)
+	cmd.Stdout = os.Stderr
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		fmt.Fprintf(os.Stderr, "WARNUNG: Ausgabe-Hook (%s) fehlgeschlagen: %v\n", Hook, err)
+	}
 }

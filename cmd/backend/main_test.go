@@ -55,6 +55,37 @@ func captureStderr(t *testing.T, fn func()) string {
 	return buf.String()
 }
 
+func captureStdout(t *testing.T, fn func()) string {
+	t.Helper()
+	old := os.Stdout
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("os.Pipe() error = %v", err)
+	}
+	os.Stdout = w
+	fn()
+	w.Close()
+	os.Stdout = old
+
+	var buf bytes.Buffer
+	buf.ReadFrom(r)
+	return buf.String()
+}
+
+func TestNoArgsPrintsDiscoveryLine(t *testing.T) {
+	var rc int
+	stdout := captureStdout(t, func() {
+		rc = run([]string{"backend"}, testCfg, nil, nil)
+	})
+
+	if rc != 0 {
+		t.Fatalf("rc = %d, want 0", rc)
+	}
+	if !strings.HasPrefix(stdout, "network nextcloud:/ ") {
+		t.Errorf("stdout = %q, want CUPS discovery line", stdout)
+	}
+}
+
 func TestReadsPDFFromFile(t *testing.T) {
 	dir := t.TempDir()
 	pdfPath := filepath.Join(dir, "job.pdf")

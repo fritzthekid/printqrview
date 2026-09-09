@@ -128,5 +128,11 @@ func reportError(err error) int {
 }
 
 func main() {
+	if dir := os.Getenv("PRINTTOQRVIEW_OUTPUT_DIR"); dir != "" {
+		output.Dir = dir
+	}
+	if hook := os.Getenv("PRINTTOQRVIEW_DISPLAY_HOOK"); hook != "" {
+		output.Hook = hook
+	}
 	os.Exit(run(os.Args, nil, nil, nil))
 }

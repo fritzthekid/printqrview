@@ -66,18 +66,64 @@ Ohne Label wird der Dateiname aus dem Pfad übernommen (inkl. Endung); bei
 stdin (`-`) muss das Label die Endung liefern, sonst wird `.bin` verwendet.
 Nutzt dieselbe Konfiguration (`NC_*`-Umgebungsvariablen) wie das Backend.
 
-## Einbindung in CUPS (nächster Schritt, noch nicht Teil dieses Prototyps)
+## Einbindung in CUPS
 
-1. `backend`-Binary nach `/usr/lib/cups/backend/nextcloud` kopieren, `chmod 700`, `chown root:root`.
-2. Drucker mit generischer PDF-Ausgabe anlegen, z. B.:
-   ```bash
-   lpadmin -p CloudPDF -E -v nextcloud:/ -m everywhere
-   ```
-   (Details zur passenden PPD/`everywhere`-Variante hängen von der CUPS-Version ab –
-   das prüfen wir, sobald der Kernbaustein steht.)
-3. Umgebungsvariablen für den CUPS-Daemon verfügbar machen (z. B. in
-   `/etc/cups/cups-files.conf` bzw. per Wrapper-Skript, da CUPS Backends mit
-   minimaler Umgebung startet).
+Alle Bausteine liegen in `deploy/`:
+
+| Datei | Zweck |
+|-------|-------|
+| `deploy/install.sh` | Installiert Binary + Wrapper + PPD, legt die Warteschlange an (idempotent) |
+| `deploy/nextcloud-backend-wrapper.sh` | Landet als `/usr/lib/cups/backend/nextcloud`; lädt `NC_*`-Env-Vars nach, da CUPS Backends mit minimaler Umgebung startet |
+| `deploy/backend.env.example` | Vorlage für `/etc/printtoqrview/backend.env` (Zugangsdaten, `chmod 600 root:root`) |
+| `deploy/cloudpdf.ppd` | PPD für eine generische PDF-Passthrough-Warteschlange (Technik wie bei `cups-pdf`: `cupsFilter2` erklärt `application/pdf` zum Endformat, CUPS stoppt die Filterkette dort, statt zu rastern) |
+
+Installation:
+
+```bash
+go build -o backend ./cmd/backend
+sudo ./deploy/install.sh
+# ggf. Zugangsdaten nachtragen:
+sudo "$EDITOR" /etc/printtoqrview/backend.env
+sudo systemctl restart cups
+
+lp -d CloudPDF testdruck.pdf
+tail -f /var/lib/printtoqrview/tmp/links.log
+```
+
+`install.sh` legt außerdem `/usr/lib/cups/backend/nextcloud` mit `chmod 700 root:root`
+an – nur mit dieser Kombination führt `cupsd` das Backend als root aus (siehe
+`man backend`); mit laxeren Rechten läuft es als unprivilegierter Nutzer (i. d. R. `lp`).
+
+Ohne Argumente aufgerufen (z. B. durch `lpinfo -v` zur Geräteerkennung) meldet
+sich das Backend mit einer CUPS-konformen Discovery-Zeile statt eines Fehlers.
+
+Erneuter Build + `sudo ./deploy/install.sh` genügt für Updates (Binary wird
+überschrieben, bestehende Env-Datei bleibt erhalten).
+
+## Ausgabe auf einem externen Display (optional)
+
+Nach jedem erfolgreichen Lauf (Backend **und** `sendfile`, da beide dieselbe
+`internal/output.Default` nutzen) kann zusätzlich ein externes Skript
+aufgerufen werden - z. B. um den QR-Code auf einem angeschlossenen Display
+auszugeben. Aktiviert wird das über `PRINTTOQRVIEW_DISPLAY_HOOK=<pfad>` in
+`backend.env`; der Hook wird als `<hook> <qr-png-pfad> <link>` aufgerufen,
+ein Fehlschlag lässt den Druckjob nicht scheitern.
+
+Mitgeliefert ist `raspi/scripts/toraspi.sh` für die Ausgabe auf einem
+Raspberry-Pi-Display:
+
+| Verzeichnis | Läuft auf | Zweck |
+|-------------|-----------|-------|
+| `raspi/scripts/toraspi.sh` | diesem Rechner (als Hook) | Komponiert QR-Code + Link-Text per ImageMagick, schickt das Ergebnis per `ssh` an den Pi |
+| `raspi/bin/pipetodisp.sh` | Raspberry Pi | Nimmt das Bild per stdin entgegen, legt es im Watch-Verzeichnis ab |
+| `raspi/bin/fb-image-watcher.sh` + `raspi/services/fb-image-watcher.service` | Raspberry Pi | systemd-Service, zeigt neue Bilder zeitbegrenzt auf dem Framebuffer an |
+
+`deploy/install.sh` installiert `toraspi.sh` (falls vorhanden) automatisch
+nach `/usr/local/lib/printtoqrview/toraspi.sh`; Aktivierung + Host/Timeout
+über `PRINTTOQRVIEW_DISPLAY_HOOK`, `RASPI_HOST`, `RASPI_DISPLAY_TIMEOUT` in
+`backend.env` (Vorlage in `deploy/backend.env.example`). Voraussetzung:
+`convert` (ImageMagick) sowie ein passwortloser SSH-Zugang von root (CUPS
+führt das Backend als root aus) zum Pi.
 
 ## Tests
 

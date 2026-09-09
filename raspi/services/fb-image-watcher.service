@@ -1,0 +1,17 @@
+[Unit]
+Description=Zeigt per scp eingelieferte Bilder zeitbegrenzt auf dem Framebuffer an
+After=multi-user.target
+
+[Service]
+Type=simple
+User=root
+Environment=WATCH_DIR=/home/eduard/fb-drop
+Environment=FB_DEVICE=/dev/fb1
+Environment=TIMEOUT=10
+ExecStart=/usr/local/bin/fb-image-watcher.sh
+Restart=on-failure
+StandardOutput=append:/var/log/fb-image-watcher.log
+StandardError=append:/var/log/fb-image-watcher.log
+
+[Install]
+WantedBy=multi-user.target

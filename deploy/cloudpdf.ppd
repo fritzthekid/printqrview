@@ -1,0 +1,50 @@
+*PPD-Adobe: "4.3"
+*%
+*% CloudPDF - generische PDF-Passthrough-Warteschlange fuer printtoqrview.
+*% Analog zur Technik von cups-pdf: cupsFilter2 erklaert application/pdf zum
+*% Endformat, damit CUPS die Filterkette nach der PDF-Erzeugung stoppt und
+*% das fertige PDF direkt an das Backend uebergibt (kein Rastern noetig).
+*%
+*FormatVersion: "4.3"
+*FileVersion: "1.0"
+*LanguageVersion: English
+*LanguageEncoding: ISOLatin1
+*PCFileName: "CLOUDPDF.PPD"
+*Manufacturer: "Generic"
+*Product: "(CloudPDF)"
+*ModelName: "CloudPDF"
+*ShortNickName: "CloudPDF"
+*NickName: "Generic CloudPDF - printtoqrview"
+*PSVersion: "(3010.000) 0"
+*LanguageLevel: "3"
+*ColorDevice: True
+*DefaultColorSpace: RGB
+*FileSystem: False
+*Throughput: "1"
+*LandscapeOrientation: Plus90
+*TTRasterizer: Type42
+*cupsVersion: 2.0
+*cupsManualCopies: True
+*cupsFilter2: "application/pdf application/pdf 0 -"
+
+*OpenUI *PageSize/Media Size: PickOne
+*OrderDependency: 10 AnySetup *PageSize
+*DefaultPageSize: A4
+*PageSize A4/A4: "<</PageSize[595 842]/ImagingBBox null>>setpagedevice"
+*PageSize Letter/Letter: "<</PageSize[612 792]/ImagingBBox null>>setpagedevice"
+*CloseUI: *PageSize
+
+*OpenUI *PageRegion/Media Size: PickOne
+*OrderDependency: 10 AnySetup *PageRegion
+*DefaultPageRegion: A4
+*PageRegion A4/A4: "<</PageSize[595 842]/ImagingBBox null>>setpagedevice"
+*PageRegion Letter/Letter: "<</PageSize[612 792]/ImagingBBox null>>setpagedevice"
+*CloseUI: *PageRegion
+
+*DefaultImageableArea: A4
+*ImageableArea A4/A4: "0 0 595 842"
+*ImageableArea Letter/Letter: "0 0 612 792"
+
+*DefaultPaperDimension: A4
+*PaperDimension A4/A4: "595 842"
+*PaperDimension Letter/Letter: "612 792"

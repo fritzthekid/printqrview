@@ -2,7 +2,7 @@
 
 | ID | Requirement | Abgedeckt durch |
 |----|-------------|-----------------|
-| R1 | Der Treiber wird als CUPS-Backend aufgerufen (`job-id user title copies options [file]`) und liest die PDF-Druckdaten entweder aus der übergebenen Datei oder aus stdin. | `cmd/backend/main_test.go::TestReadsPDFFromFile`, `::TestReadsPDFFromStdin` |
+| R1 | Der Treiber wird als CUPS-Backend aufgerufen (`job-id user title copies options [file]`) und liest die PDF-Druckdaten entweder aus der übergebenen Datei oder aus stdin. Ohne Argumente (Geräteerkennung, z. B. `lpinfo -v`) meldet er sich mit einer CUPS-konformen Discovery-Zeile statt eines Fehlers. | `cmd/backend/main_test.go::TestReadsPDFFromFile`, `::TestReadsPDFFromStdin`, `::TestNoArgsPrintsDiscoveryLine` |
 | R2 | Fehlt die PDF-Nutzlast (leere Daten), wird der Job mit Fehlerstatus (Exit-Code ≠ 0) abgebrochen, ohne einen Link auszugeben. | `cmd/backend/main_test.go::TestEmptyPDFIsRejected` |
 | R3 | Für jede Datei wird ein eindeutiger, dateisystemsicherer Dateiname aus Zeitstempel + Jobtitel erzeugt (Sonderzeichen werden ersetzt). | `internal/filenames/filenames_test.go` |
 | R4 | Das PDF wird per WebDAV PUT in ein konfigurierbares Zielverzeichnis der Nextcloud-Instanz hochgeladen. | `internal/nextcloud/client_test.go::TestUploadFileSuccess`, `::TestUploadFileFailureRaises` |
@@ -14,5 +14,6 @@
 
 ## Bewusst offen gelassen (vorläufig)
 - Ausgabe ist Log-Zeile + QR-Code-PNG (kein Desktop-Notify, keine E-Mail) – laut Vorgabe.
-- Kein echtes CUPS-PPD/Print-Queue-Setup (`lpadmin`) – das ist Systemkonfiguration, kein Testgegenstand des Treibers selbst.
 - Authentifizierung: Basic Auth mit Nextcloud-App-Passwort (empfohlen statt Klartext-Kontopasswort).
+- Das eigentliche CUPS-Setup (`deploy/install.sh`, PPD, Wrapper-Skript) ist Systemkonfiguration
+  außerhalb der automatisierten Tests – manuell/smoke-getestet, siehe README "Einbindung in CUPS".
