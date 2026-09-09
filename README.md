@@ -1,7 +1,8 @@
 # nextcloud-pdf-backend
 
-CUPS-Backend, das einen Druckauftrag als PDF in eine Nextcloud-Instanz hochlädt,
-einen öffentlichen Freigabelink erzeugt und diesen (vorläufig) als Text ausgibt.
+CUPS-Backend (in Go), das einen Druckauftrag als PDF in eine Nextcloud-Instanz
+hochlädt, einen öffentlichen, ablaufenden Freigabelink erzeugt und diesen
+(vorläufig) als Log-Zeile + QR-Code ausgibt.
 
 ## Warum "Backend" statt "Filter"?
 
@@ -10,6 +11,18 @@ CUPS wandelt Druckdaten über eine Filterkette in ein Format um, das der
 das Zielgerät sendet. Wenn man dem Drucker eine Standard-PDF-Warteschlange
 zuweist (genau wie es `cups-pdf` tut), liegt am Backend bereits ein fertiges
 PDF vor – wir müssen also keine PostScript/PCL-Interpretation selbst machen.
+
+## Aufbau
+
+| Paket | Zweck |
+|-------|-------|
+| `internal/config` | Konfiguration ausschließlich über Umgebungsvariablen (R6) |
+| `internal/filenames` | Eindeutige, dateisystemsichere Dateinamen aus Titel + Zeitstempel (R3) |
+| `internal/nextcloud` | WebDAV-Upload (R4) + öffentlicher, ablaufender Freigabelink per OCS-API (R5) |
+| `internal/qrview` | QR-Code-PNG aus dem Freigabelink |
+| `internal/output` | Vorläufige Ausgabe: Link in `tmp/links.log` + QR-PNG in `tmp/` (R7) |
+| `cmd/backend` | CUPS-Backend-Einstiegspunkt |
+| `cmd/sendfile` | Einstiegspunkt für beliebige Dateien (kein Druckjob) |
 
 ## Konfiguration (Umgebungsvariablen)
 
@@ -21,25 +34,32 @@ PDF vor – wir müssen also keine PostScript/PCL-Interpretation selbst machen.
 | `NC_TARGET_DIR` | nein | Zielordner, Default `/PrinterUploads` |
 | `NC_LINK_EXPIRE_DAYS` | nein | Gültigkeitsdauer des Freigabelinks in Tagen, Default `1` |
 
+## Bauen
+
+```bash
+go build -o backend ./cmd/backend
+go build -o sendfile ./cmd/sendfile
+```
+
 ## Lokal testen
 
 ```bash
 export NC_BASE_URL=https://cloud.orthos.selfhost.eu
 export NC_USERNAME=printer
 export NC_PASSWORD=<app-passwort>
-cat testdruck.pdf | python3 -m printtoqrview.backend job1 eduard "Testdruck" 1 ""
+cat testdruck.pdf | ./backend job1 eduard "Testdruck" 1 ""
 ```
 
 ## Beliebige Dateien teilen (ohne Drucker)
 
-Neben dem CUPS-Backend gibt es `sendfile` als einfache CLI für den Fall, dass
-man keine Druckdaten hat, sondern direkt eine beliebige Datei (z. B. eine ZIP)
-über denselben Weg (Nextcloud-Upload + Freigabelink + QR-Code) teilen will:
+Neben dem CUPS-Backend gibt es `sendfile` für den Fall, dass man keine
+Druckdaten hat, sondern direkt eine beliebige Datei (z. B. eine ZIP) über
+denselben Weg (Nextcloud-Upload + Freigabelink + QR-Code) teilen will:
 
 ```bash
-python3 -m printtoqrview.sendfile pfad/zu/test.zip
-python3 -m printtoqrview.sendfile pfad/zu/test.zip "Anderer Titel.zip"
-cat test.zip | python3 -m printtoqrview.sendfile - test.zip
+./sendfile pfad/zu/test.zip
+./sendfile pfad/zu/test.zip "Anderer Titel.zip"
+cat test.zip | ./sendfile - test.zip
 ```
 
 Ohne Label wird der Dateiname aus dem Pfad übernommen (inkl. Endung); bei
@@ -48,7 +68,7 @@ Nutzt dieselbe Konfiguration (`NC_*`-Umgebungsvariablen) wie das Backend.
 
 ## Einbindung in CUPS (nächster Schritt, noch nicht Teil dieses Prototyps)
 
-1. Skript nach `/usr/lib/cups/backend/nextcloud` kopieren, `chmod 700`, `chown root:root`.
+1. `backend`-Binary nach `/usr/lib/cups/backend/nextcloud` kopieren, `chmod 700`, `chown root:root`.
 2. Drucker mit generischer PDF-Ausgabe anlegen, z. B.:
    ```bash
    lpadmin -p CloudPDF -E -v nextcloud:/ -m everywhere
@@ -62,7 +82,7 @@ Nutzt dieselbe Konfiguration (`NC_*`-Umgebungsvariablen) wie das Backend.
 ## Tests
 
 ```bash
-python3 -m pytest -v
+go test ./...
 ```
 
 Siehe `REQUIREMENTS.md` für die Zuordnung Requirement → Test.
