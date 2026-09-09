@@ -7,6 +7,7 @@
 # Claude Code session data
 .claude/
 
-# Lokale Test-PDF
+# Lokale Testdateien
 testdruck.pdf
+ausgabe.png
 bck/
