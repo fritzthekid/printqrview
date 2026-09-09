@@ -14,36 +14,49 @@ BLACK_PNG="${BLACK_PNG:-$HOME/.fb-image-watcher/black.png}"
 
 mkdir -p "$WATCH_DIR" "$(dirname "$BLACK_PNG")"
 
+# Saubere Ausgangslage: verwaiste fbi-Prozesse aus einem vorherigen Lauf
+# (z.B. nach Absturz/Neustart) beenden, bevor wir neue starten.
+pkill -x fbi 2>/dev/null || true
+
 if [ ! -f "$BLACK_PNG" ]; then
     RES=$(fbset -fb "$FB_DEVICE" -s | awk '/geometry/ {print $2"x"$3}')
     RES="${RES:-480x320}"
     convert -size "$RES" xc:black "$BLACK_PNG"
 fi
 
-CURRENT_PID=""
+CURRENT_FILE=/tmp/fb-image-watcher/current-file
+GEN_FILE=/tmp/fb-image-watcher.pid
 
+# "setsid cmd &" liefert in $! haeufig nur die PID des kurzlebigen
+# setsid-Wrappers (der intern forkt, weil der Hintergrundjob schon
+# Prozessgruppenleiter ist) statt der PID des eigentlichen fbi-Prozesses -
+# darauf gestuetztes "kill $!" trifft also nie den echten fbi. Deshalb hier
+# stattdessen ein pauschales "pkill -x fbi" (auf diesem dedizierten
+# Display-Pi laeuft fbi ausschliesslich fuer diesen Zweck).
 clear_screen() {
-    [ -n "$CURRENT_PID" ] && kill "$CURRENT_PID" 2>/dev/null || true
+    pkill -x fbi 2>/dev/null || true
     fbi -d "$FB_DEVICE" -T 1 -noverbose -once "$BLACK_PNG"
 }
 
 show_image() {
     local file="$1"
-    currentfile=/tmp/fb-image-watcher/current-file
-    [ -n "$CURRENT_PID" ] && kill "$CURRENT_PID" 2>/dev/null || true
-    mkdir -p $(dirname /tmp/fb-image-watcher/current-file)
-    cp $file $currentfile
+    local token
+    token=$(date +%s%N)
 
-    echo ls -l $file $currentfile
-    setsid fbi -d "$FB_DEVICE" -T 1 -noverbose -a "$currentfile" &
-    CURRENT_PID=$!
+    pkill -x fbi 2>/dev/null || true
+    mkdir -p "$(dirname "$CURRENT_FILE")"
+    cp "$file" "$CURRENT_FILE"
+
+    setsid fbi -d "$FB_DEVICE" -T 1 -noverbose -a "$CURRENT_FILE" &
+    echo "$token" > "$GEN_FILE"
     (
         sleep "$TIMEOUT"
-        if [ "$(cat /tmp/fb-image-watcher.pid 2>/dev/null)" = "$CURRENT_PID" ]; then
+        # $GEN_FILE wird bei jedem neuen Bild überschrieben; nur löschen,
+        # wenn in der Zwischenzeit kein neueres Bild angekommen ist.
+        if [ "$(cat "$GEN_FILE" 2>/dev/null)" = "$token" ]; then
             clear_screen
         fi
     ) &
-    echo "$CURRENT_PID" > /tmp/fb-image-watcher.pid
 }
 
 echo "Beobachte $WATCH_DIR (Anzeige auf $FB_DEVICE, Timeout ${TIMEOUT}s)..."

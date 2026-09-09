@@ -60,6 +60,9 @@ func runHook(pngPath, link string) {
 	cmd.Stdout = os.Stderr
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
-		fmt.Fprintf(os.Stderr, "WARNUNG: Ausgabe-Hook (%s) fehlgeschlagen: %v\n", Hook, err)
+		// CUPS routet Backend-Stderr-Zeilen nach ihrem (englischen) Präfix in
+		// die passende Loglevel-Kategorie; "WARNING:" landet damit auch bei
+		// LogLevel "warn" (Standard) sichtbar in /var/log/cups/error_log.
+		fmt.Fprintf(os.Stderr, "WARNING: Ausgabe-Hook (%s) fehlgeschlagen: %v\n", Hook, err)
 	}
 }

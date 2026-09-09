@@ -41,9 +41,15 @@
 *PageRegion Letter/Letter: "<</PageSize[612 792]/ImagingBBox null>>setpagedevice"
 *CloseUI: *PageRegion
 
+*% Bewusst NICHT randlos (ImageableArea == PaperDimension): CUPS generiert
+*% dafuer automatisch eine "_borderless"-Medienvariante, die GTK-Druckdialoge
+*% (z. B. Firefox) teils nicht auflösen koennen ("Unknown paper size
+*% iso_a4_210x297mm_borderless") - der Dialog bricht dann ab, ohne den Job
+*% ueberhaupt an CUPS zu senden (lp/LibreOffice sind davon nicht betroffen,
+*% da sie die GTK-Papiergroessen-Aufloesung umgehen).
 *DefaultImageableArea: A4
-*ImageableArea A4/A4: "0 0 595 842"
-*ImageableArea Letter/Letter: "0 0 612 792"
+*ImageableArea A4/A4: "18 18 577 824"
+*ImageableArea Letter/Letter: "18 18 594 774"
 
 *DefaultPaperDimension: A4
 *PaperDimension A4/A4: "595 842"
