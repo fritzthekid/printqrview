@@ -1,6 +1,7 @@
 # Go build artifacts
 /backend
 /sendfile
+/webshare
 *.test
 *.out
 

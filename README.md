@@ -22,7 +22,8 @@ PDF vor – wir müssen also keine PostScript/PCL-Interpretation selbst machen.
 | `internal/qrview` | QR-Code-PNG aus dem Freigabelink |
 | `internal/output` | Vorläufige Ausgabe: Link in `tmp/links.log` + QR-PNG in `tmp/` (R7) |
 | `cmd/backend` | CUPS-Backend-Einstiegspunkt |
-| `cmd/sendfile` | Einstiegspunkt für beliebige Dateien (kein Druckjob) |
+| `cmd/sendfile` | CLI-Einstiegspunkt für beliebige Dateien (kein Druckjob) |
+| `cmd/webshare` | HTTP-Einstiegspunkt für beliebige Dateien - z. B. vom Handy per Browser, ohne eigene Nextcloud-Zugangsdaten |
 
 ## Konfiguration (Umgebungsvariablen)
 
@@ -39,6 +40,7 @@ PDF vor – wir müssen also keine PostScript/PCL-Interpretation selbst machen.
 ```bash
 go build -o backend ./cmd/backend
 go build -o sendfile ./cmd/sendfile
+go build -o webshare ./cmd/webshare
 ```
 
 ## Lokal testen
@@ -66,6 +68,123 @@ Ohne Label wird der Dateiname aus dem Pfad übernommen (inkl. Endung); bei
 stdin (`-`) muss das Label die Endung liefern, sonst wird `.bin` verwendet.
 Nutzt dieselbe Konfiguration (`NC_*`-Umgebungsvariablen) wie das Backend.
 
+## Vom Handy teilen: zwei Varianten
+
+Es gibt zwei unabhängige Wege, eine Datei vom Handy aus zu teilen - je
+nachdem, ob ein dauerhaft erreichbarer Server zur Verfügung steht:
+
+| | `webshare` (unten) | `web/share.html` (danach) |
+|---|---|---|
+| Braucht einen erreichbaren Server | Ja (LAN/VPN zu diesem Rechner) | Nein - nur Nextcloud selbst |
+| Zugangsdaten liegen bei | Server (`backend.env`) | Im Browser des Handys (localStorage) |
+| Funktioniert von unterwegs (mobiles Netz) | Nein, außer der Server ist von außen erreichbar | Ja, solange Nextcloud erreichbar ist |
+| Abhängigkeit von CORS-Konfiguration der Nextcloud | Nein | Ja |
+
+### webshare (Server + Handy im selben Netz/VPN)
+
+`webshare` macht `sendfile` als kleine Web-Oberfläche verfügbar: ein Handy im
+selben Netz kann darüber eine Datei auswählen und hochladen, ohne selbst
+Nextcloud-Zugangsdaten zu kennen - die liegen ausschließlich auf dem Server,
+der `webshare` betreibt. Der QR-Code wird direkt im Handy-Browser angezeigt.
+
+```bash
+export WEBSHARE_TOKEN=$(openssl rand -hex 24)   # geheimer URL-Bestandteil, kein Login
+./webshare
+# -> http://<diese-maschine>:8642/s/<token>/ im Handy-Browser öffnen
+```
+
+Abgesichert wird der Zugriff ausschließlich über das Token als Teil des
+URL-Pfads (`/s/<token>/...`) - jede Anfrage mit falschem/fehlendem Token
+liefert 404. Kein Login, aber das Token darf nicht öffentlich geteilt werden
+(z. B. per Chat-Link an eine bestimmte Person statt öffentlich zu posten).
+
+| Variable | Pflicht | Beschreibung |
+|----------|---------|--------------|
+| `WEBSHARE_TOKEN` | ja | Geheimer URL-Bestandteil, z. B. `openssl rand -hex 24` |
+| `WEBSHARE_LISTEN` | nein | Listen-Adresse, Default `:8642` |
+
+Nutzt dieselbe `NC_*`-Konfiguration sowie `PRINTTOQRVIEW_OUTPUT_DIR` /
+`PRINTTOQRVIEW_DISPLAY_HOOK` wie Backend und `sendfile` (Log, QR-Datei und
+optionaler Anzeige-Hook - z. B. das Pi-Display - laufen also auch bei
+Handy-Uploads mit). `deploy/install.sh` installiert `webshare` (falls
+gebaut) automatisch als systemd-Service `printtoqrview-webshare` und
+generiert `WEBSHARE_TOKEN`, falls noch keins in `backend.env` steht.
+
+**Grenzen der aktuellen Umsetzung:** Es ist eine einfache mobile Webseite,
+keine installierbare PWA und kein Ziel im Android-"Teilen"-Menü - beides
+würde zusätzlich HTTPS voraussetzen (Service Worker + Web Share Target API
+funktionieren nur über HTTPS oder `localhost`). Ohne SDK/Emulator in dieser
+Umgebung ist außerdem keine native Android-App entstanden. Für den
+eigentlichen Zweck (Datei im Browser auswählen, senden, QR-Code sehen)
+reicht die Webseite über normales HTTP im LAN.
+
+### Direkt vom Handy, ganz ohne Server (`web/share.html`)
+
+`web/share.html` ist eine einzelne, in sich geschlossene HTML-Datei ohne
+Build-Schritt: Sie spricht **direkt aus dem Handy-Browser** per WebDAV/OCS-API
+mit Nextcloud (dieselbe Logik wie `internal/nextcloud`, nur als
+JavaScript/`fetch()`) - kein `webshare`, kein fester Server, keine
+Abhängigkeit vom Heimnetz. Es reicht, dass das Handy Nextcloud erreichen
+kann (WLAN, mobiles Netz, überall).
+
+Nutzung, Variante A - Zugangsdaten von Hand eintragen:
+
+1. Die Datei `web/share.html` aufs Handy bringen (z. B. per Nextcloud selbst
+   hochladen und mit `/download` öffnen, per Mail/Messenger senden, oder
+   irgendwo statisch hosten) und im Browser öffnen.
+2. Einmalig Server-URL, Benutzername und **App-Passwort** eintragen -
+   das wird nur lokal im Browser (`localStorage`) gespeichert, nie an
+   Dritte übertragen. Es verlässt das Gerät nur in Richtung der eingetragenen
+   Nextcloud-Instanz.
+3. Datei auswählen, Senden, QR-Code erscheint direkt auf der Seite.
+
+Nutzung, Variante B - personalisierte Datei ohne jede Eingabe (empfohlen):
+
+`deploy/gen-share-page.sh` erzeugt aus `web/share.html` eine Kopie mit fest
+eingebackenen Zugangsdaten - aufs Handy kopieren, öffnen, fertig, kein
+Formular nötig:
+
+```bash
+./deploy/gen-share-page.sh /etc/printtoqrview/backend.env > mein-handy.html
+# oder mit eigenen Werten statt einer Env-Datei:
+NC_BASE_URL=https://cloud.example.com NC_USERNAME=printer NC_PASSWORD=<app-passwort> \
+  ./deploy/gen-share-page.sh > mein-handy.html
+```
+
+`mein-handy.html` dann aufs Handy übertragen und öffnen. **Empfehlung:**
+dafür ein **eigenes App-Passwort** anlegen (Nextcloud-Weboberfläche →
+Einstellungen → Sicherheit → "Neues App-Passwort erstellen", z. B. benannt
+`handy-share`) statt das App-Passwort des CUPS-Backends wiederzuverwenden -
+so lässt sich der Zugriff unabhängig widerrufen, falls das Handy verloren
+geht. Noch weiter gedacht: ein eigener, auf einen einzelnen Ordner
+beschränkter Nextcloud-Benutzer (analog zum bestehenden `printer`-Nutzer,
+der ja auch nicht der Hauptaccount ist) begrenzt den Schaden im Verlustfall
+zusätzlich auf diesen einen Ordner. Beides ist reine
+Nextcloud-Administration, nicht Teil dieses Repos.
+
+**Wichtige Einschränkung: CORS.** Browser verbieten Cross-Origin-`fetch()`-
+Aufrufe, solange der Zielserver das nicht explizit per
+`Access-Control-Allow-Origin`-Header erlaubt. Nextcloud tut das standardmäßig
+**nicht** für WebDAV/OCS-Zugriffe. Zwei Wege, das zu lösen:
+
+- **Gleiche Origin:** `share.html` auf derselben Domain wie Nextcloud
+  hosten (z. B. als zusätzliche statische Datei auf demselben Webserver) -
+  dann greift CORS gar nicht erst, da es kein Cross-Origin-Request mehr ist.
+- **CORS-Header konfigurieren:** Falls die Seite auf einer anderen Domain
+  liegt (auch `file://` zählt als eigene Origin), muss der
+  Nextcloud-/Reverse-Proxy-Server für `/remote.php/dav/...` und
+  `/ocs/v2.php/...` u. a. `Access-Control-Allow-Origin`,
+  `Access-Control-Allow-Methods: MKCOL, PUT, POST` und
+  `Access-Control-Allow-Headers: Authorization, OCS-APIRequest, Content-Type`
+  setzen (inkl. Beantwortung der `OPTIONS`-Preflight-Requests).
+
+Schlägt ein Request mangels CORS fehl, zeigt die Seite einen entsprechenden
+Hinweis statt eines kryptischen Browserfehlers. Diese Variante konnte hier
+nicht gegen eine echte Nextcloud-Instanz getestet werden (nur die
+JavaScript-Logik selbst, z. B. Dateiname-Generierung, per Node.js
+gegengeprüft) - beim ersten echten Einsatz also mit einer unwichtigen
+Testdatei anfangen.
+
 ## Einbindung in CUPS
 
 Alle Bausteine liegen in `deploy/`:
@@ -76,6 +195,7 @@ Alle Bausteine liegen in `deploy/`:
 | `deploy/nextcloud-backend-wrapper.sh` | Landet als `/usr/lib/cups/backend/nextcloud`; lädt `NC_*`-Env-Vars nach, da CUPS Backends mit minimaler Umgebung startet |
 | `deploy/backend.env.example` | Vorlage für `/etc/printtoqrview/backend.env` (Zugangsdaten, `chmod 600 root:root`) |
 | `deploy/cloudpdf.ppd` | PPD für eine generische PDF-Passthrough-Warteschlange (Technik wie bei `cups-pdf`: `cupsFilter2` erklärt `application/pdf` zum Endformat, CUPS stoppt die Filterkette dort, statt zu rastern) |
+| `deploy/webshare.service` | systemd-Unit für `webshare` (siehe Abschnitt "Vom Handy teilen"), wird von `install.sh` mit installiert falls `webshare` gebaut wurde |
 
 Installation:
 

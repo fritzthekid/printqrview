@@ -28,3 +28,18 @@ func TestWritePNGCreatesValidPNG(t *testing.T) {
 		}
 	}
 }
+
+func TestPNGBytesReturnsValidPNG(t *testing.T) {
+	data, err := PNGBytes("https://cloud.orthos.selfhost.eu/s/abc123")
+	if err != nil {
+		t.Fatalf("PNGBytes() error = %v", err)
+	}
+	if len(data) < len(pngMagic) {
+		t.Fatalf("data too short: %d bytes", len(data))
+	}
+	for i, b := range pngMagic {
+		if data[i] != b {
+			t.Fatalf("not a PNG file, got header %v", data[:len(pngMagic)])
+		}
+	}
+}

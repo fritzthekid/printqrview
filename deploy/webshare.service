@@ -1,0 +1,17 @@
+[Unit]
+Description=printtoqrview Web-Upload (Handy/Browser -> Nextcloud + QR)
+After=network.target
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/printtoqrview/backend.env
+ExecStart=/usr/local/lib/printtoqrview/webshare
+Restart=on-failure
+# Läuft als root, damit es (wie das CUPS-Backend) ohne Sonderrechte-Gefummel
+# nach PRINTTOQRVIEW_OUTPUT_DIR schreiben und den Anzeige-Hook aufrufen kann
+# - gleiche Vertrauensebene wie der bereits als root laufende CUPS-Backend-
+# Prozess auf dieser Maschine.
+User=root
+
+[Install]
+WantedBy=multi-user.target
