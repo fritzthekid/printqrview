@@ -23,7 +23,7 @@
   erwartet an fehlendem CORS fehl (per `curl -X OPTIONS` verifiziert). Für genau diesen Fall (kein
   CORS, kein erreichbarer Server) läuft `webshare` (R10) stattdessen direkt auf dem Handy in Termux
   (kein Go-Code-Unterschied, nur Cross-Compile-Fallstrick: reines Go-DNS scheitert unter Android ohne
-  cgo – native Kompilierung in Termux behebt das) – siehe README "webshare direkt auf dem Handy".
+  cgo – native Kompilierung in Termux behebt das) – siehe `doc/android.md`.
   Diese Kombination wurde end-to-end erfolgreich getestet (Upload + Freigabelink + QR-Anzeige).
 - `scripts/share.sh` ist ein reiner `lp`-Wrapper (kein eigener Upload-Code) für Rechner mit
   eingerichteter CUPS-Warteschlange – kein Go-Code, kein separater Test, manuell live gegen die
