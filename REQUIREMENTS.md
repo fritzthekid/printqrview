@@ -19,8 +19,12 @@
 - Authentifizierung: Basic Auth mit Nextcloud-App-Passwort (empfohlen statt Klartext-Kontopasswort).
 - Das eigentliche CUPS-Setup (`deploy/install.sh`, PPD, Wrapper-Skript) ist Systemkonfiguration
   außerhalb der automatisierten Tests – manuell/smoke-getestet, siehe README "Einbindung in CUPS".
-- `web/share.html` (R11) wurde nicht gegen eine echte Nextcloud-Instanz getestet (WebDAV/OCS-Aufrufe
-  + CORS-Verhalten), da das reales Nextcloud-Setup erfordert – siehe README-Warnhinweis dort.
+- `web/share.html` (R11) wurde live gegen eine echte Nextcloud-Instanz getestet – dort schlägt es wie
+  erwartet an fehlendem CORS fehl (per `curl -X OPTIONS` verifiziert). Für genau diesen Fall (kein
+  CORS, kein erreichbarer Server) läuft `webshare` (R10) stattdessen direkt auf dem Handy in Termux
+  (kein Go-Code-Unterschied, nur Cross-Compile-Fallstrick: reines Go-DNS scheitert unter Android ohne
+  cgo – native Kompilierung in Termux behebt das) – siehe README "webshare direkt auf dem Handy".
+  Diese Kombination wurde end-to-end erfolgreich getestet (Upload + Freigabelink + QR-Anzeige).
 - `scripts/share.sh` ist ein reiner `lp`-Wrapper (kein eigener Upload-Code) für Rechner mit
   eingerichteter CUPS-Warteschlange – kein Go-Code, kein separater Test, manuell live gegen die
   echte Warteschlange verifiziert (Datei-Argument und stdin, siehe README).

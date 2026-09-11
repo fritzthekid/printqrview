@@ -68,17 +68,24 @@ Ohne Label wird der Dateiname aus dem Pfad übernommen (inkl. Endung); bei
 stdin (`-`) muss das Label die Endung liefern, sonst wird `.bin` verwendet.
 Nutzt dieselbe Konfiguration (`NC_*`-Umgebungsvariablen) wie das Backend.
 
-## Vom Handy teilen: zwei Varianten
+## Vom Handy teilen: drei Varianten
 
-Es gibt zwei unabhängige Wege, eine Datei vom Handy aus zu teilen - je
-nachdem, ob ein dauerhaft erreichbarer Server zur Verfügung steht:
+Je nachdem, ob ein dauerhaft erreichbarer Server zur Verfügung steht und ob
+die Nextcloud-Instanz CORS für Browser-Zugriffe erlaubt:
 
-| | `webshare` (unten) | `web/share.html` (danach) |
-|---|---|---|
-| Braucht einen erreichbaren Server | Ja (LAN/VPN zu diesem Rechner) | Nein - nur Nextcloud selbst |
-| Zugangsdaten liegen bei | Server (`backend.env`) | Im Browser des Handys (localStorage) |
-| Funktioniert von unterwegs (mobiles Netz) | Nein, außer der Server ist von außen erreichbar | Ja, solange Nextcloud erreichbar ist |
-| Abhängigkeit von CORS-Konfiguration der Nextcloud | Nein | Ja |
+| | `webshare` auf einem Server | `web/share.html` | `webshare` in Termux auf dem Handy |
+|---|---|---|---|
+| Braucht einen erreichbaren Server | Ja (LAN/VPN zu diesem Rechner) | Nein - nur Nextcloud selbst | Nein - läuft auf dem Handy selbst |
+| Zugangsdaten liegen bei | Server (`backend.env`) | Im Browser des Handys (localStorage) | Auf dem Handy (Termux-eigene Datei) |
+| Funktioniert von unterwegs (mobiles Netz) | Nein, außer der Server ist von außen erreichbar | Ja, solange Nextcloud erreichbar ist | Ja, solange Nextcloud erreichbar ist |
+| Abhängigkeit von CORS-Konfiguration der Nextcloud | Nein | Ja - viele Standard-Setups blockieren das | Nein |
+| Einrichtungsaufwand | Gering (systemd-Service) | Gering (eine Datei) | Mittel (Termux + Go-Toolchain) |
+
+**Praxis-Empfehlung:** Erlaubt eure Nextcloud-Instanz keine CORS-Zugriffe
+(prüfbar wie im Abschnitt zu `web/share.html` beschrieben) und ist kein
+dauerhaft erreichbarer Server vorhanden, ist "webshare in Termux" die
+Variante, die tatsächlich funktioniert - so wurde es hier auch am Ende
+umgesetzt.
 
 ### webshare (Server + Handy im selben Netz/VPN)
 
@@ -179,11 +186,104 @@ Aufrufe, solange der Zielserver das nicht explizit per
   setzen (inkl. Beantwortung der `OPTIONS`-Preflight-Requests).
 
 Schlägt ein Request mangels CORS fehl, zeigt die Seite einen entsprechenden
-Hinweis statt eines kryptischen Browserfehlers. Diese Variante konnte hier
-nicht gegen eine echte Nextcloud-Instanz getestet werden (nur die
-JavaScript-Logik selbst, z. B. Dateiname-Generierung, per Node.js
-gegengeprüft) - beim ersten echten Einsatz also mit einer unwichtigen
-Testdatei anfangen.
+Hinweis statt eines kryptischen Browserfehlers.
+
+**Praxiserfahrung:** Gegen eine reale Nextcloud-Instanz getestet, an der die
+CORS-Voraussetzung nicht erfüllt war (Standard-Setup, kein Admin-Zugriff, um
+das nachzurüsten) - Ergebnis war genau der oben beschriebene Fehler
+(`Access-Control-Allow-Origin` fehlt sowohl auf `/remote.php/dav/...` als
+auch auf `/ocs/v2.php/...`, per `curl -X OPTIONS` verifizierbar). Ohne
+Admin-Zugriff auf den Nextcloud-/Reverse-Proxy-Server bleibt diese Variante
+in so einem Fall eine Sackgasse - dann stattdessen "webshare in Termux"
+(nächster Abschnitt) nutzen, das dasselbe Problem grundsätzlich umgeht (Upload
+läuft dort server- statt browserseitig, CORS betrifft nur Browser-`fetch()`).
+
+### webshare direkt auf dem Handy (Termux)
+
+Falls die Nextcloud-Instanz kein CORS erlaubt (siehe oben) und kein
+dauerhaft erreichbarer Server zur Verfügung steht, ist das die Variante, die
+tatsächlich zuverlässig funktioniert: `webshare` läuft nicht auf einem
+Server, sondern **direkt auf dem Handy selbst**, in [Termux](https://termux.dev/)
+(Terminal-Emulator mit echter Linux-Umgebung für Android, aus F-Droid
+installieren - **nicht** die veraltete Play-Store-Version). Da die
+Nextcloud-Zugriffe dabei von einem echten Server-Prozess ausgehen (nicht
+aus dem Browser), spielt CORS keine Rolle mehr.
+
+**Wichtige Falle: DNS.** Ein von diesem Rechner aus fertig
+cross-kompiliertes Go-Binary (egal ob mit `GOOS=linux` oder `GOOS=android`,
+jeweils `CGO_ENABLED=0`) kann unter Android **nicht** per DNS auflösen -
+Android hat kein normales `/etc/resolv.conf`-basiertes DNS, Go's reiner
+Go-Resolver versucht dann eine Anfrage an einen (nicht existenten)
+lokalen Resolver und scheitert mit `read: connection refused`. Ein
+`/etc/hosts`-Eintrag mit der festen IP ist **keine echte Lösung** (DynDNS,
+und/oder dieselbe IP bedient mehrere Ziele per SNI/virtuellem Hosting -
+beides bei selbst gehosteten Instanzen üblich). Der einzige robuste Weg:
+**`webshare` direkt in Termux selbst kompilieren** - dort ist ein
+C-Compiler vorhanden, Go aktiviert dann automatisch cgo, das echte
+Android-DNS (Bionic) korrekt nutzt.
+
+Einrichtung, einmalig:
+
+```bash
+# 1) Auf diesem Rechner: nur den nötigen Quellcode packen (Repo ist privat,
+#    "git clone" auf dem Handy würde erst GitHub-Zugangsdaten dort brauchen)
+tar czf webshare-src.tar.gz go.mod go.sum cmd/webshare internal
+
+# 2) Aufs Handy übertragen, z. B. mit dem eigenen sendfile (dogfooding):
+sudo bash -c 'set -a; . /etc/printtoqrview/backend.env; set +a; ./sendfile webshare-src.tar.gz webshare-src.tar.gz'
+# -> Link/QR-Code auf dem Handy öffnen, Datei landet in ~/storage/downloads/
+```
+
+In Termux:
+
+```bash
+termux-setup-storage                       # einmalig, Zugriff auf Downloads erlauben
+cp ~/storage/downloads/webshare-src.tar.gz ~/
+tar xzf ~/webshare-src.tar.gz -C ~         # entpackt go.mod, go.sum, cmd/, internal/ nach ~
+
+pkg install golang clang -y                # einmalig, braucht etwas Zeit
+go build -o ~/webshare-native ./cmd/webshare
+file ~/webshare-native                     # sollte "dynamically linked" zeigen (cgo aktiv)
+```
+
+Zugangsdaten + Token (Termux-eigene Datei, kein root/sudo nötig - Termux'
+eigener App-Speicher ist bereits durch Android von anderen Apps isoliert):
+
+```bash
+cat > ~/webshare.env <<'ENV'
+export NC_BASE_URL=https://cloud.example.com
+export NC_USERNAME=printer
+export NC_PASSWORD=<app-passwort>
+export WEBSHARE_TOKEN=<mit "openssl rand -hex 24" erzeugen>
+export WEBSHARE_LISTEN=127.0.0.1:8642
+ENV
+chmod 600 ~/webshare.env
+```
+
+Starten (im Vordergrund zum Testen):
+
+```bash
+source ~/webshare.env
+~/webshare-native
+# -> im Handy-Browser: http://127.0.0.1:8642/s/<token>/
+```
+
+Im Hintergrund weiterlaufen lassen (übersteht App-Wechsel; überlebt kein
+Beenden der Termux-App komplett/Android-Neustart - dafür bräuchte es
+`termux-services`, hier nicht weiter beschrieben):
+
+```bash
+termux-wake-lock
+source ~/webshare.env
+nohup ~/webshare-native > ~/webshare.log 2>&1 &
+disown
+```
+
+Prüfen/beenden: `pgrep webshare-native`, `tail -f ~/webshare.log`,
+`pkill webshare-native`, `termux-wake-unlock`.
+
+Live gegen eine echte Nextcloud-Instanz getestet (Upload + Freigabelink +
+QR-Code-Anzeige im Handy-Browser) - funktioniert.
 
 ## Einbindung in CUPS
 

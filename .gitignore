@@ -2,6 +2,8 @@
 /backend
 /sendfile
 /webshare
+/webshare-arm64
+/webshare-native
 *.test
 *.out
 
