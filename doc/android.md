@@ -98,7 +98,8 @@ disown
 Prüfen/beenden: `pgrep webshare-native`, `tail -f ~/webshare.log`,
 `pkill webshare-native`, `termux-wake-unlock`.
 
-**Reboot-fest mit termux-services + Termux:Boot:**
+**Mit termux-services (Absturz-Neustart + Auto-Start beim nächsten
+Termux-Öffnen):**
 
 ```bash
 pkg install termux-services -y
@@ -120,20 +121,19 @@ sv status webshare   # sollte "run: webshare: (pid ...) ...s" zeigen
 ```
 
 Damit startet/überwacht `runsvdir` den Service automatisch bei jeder neuen
-Termux-Sitzung und startet ihn bei Absturz neu. Für tatsächliches
-Überleben eines **Handy-Neustarts** zusätzlich
-[Termux:Boot](https://f-droid.org/packages/com.termux.boot/) (separate
-App, ebenfalls aus F-Droid) installieren, einmal öffnen, dann:
+Termux-Sitzung und startet ihn bei Absturz neu.
 
-```bash
-mkdir -p ~/.termux/boot
-cat > ~/.termux/boot/start-webshare <<'BOOT'
-#!/data/data/com.termux/files/usr/bin/sh
-termux-wake-lock
-sv up webshare
-BOOT
-chmod +x ~/.termux/boot/start-webshare
-```
+**Kein echter Reboot-Automatismus möglich:** Der naheliegende Weg dafür
+wäre [Termux:Boot](https://f-droid.org/packages/com.termux.boot/) (führt
+Skripte beim Hochfahren des Handys aus) - diese App existiert aber nicht
+für jede Android-Version (bei diesem Gerät z. B. nicht verfügbar). Ohne
+Termux:Boot startet nach einem Handy-Neustart **nichts von selbst** - der
+Service läuft erst wieder, sobald Termux das nächste Mal geöffnet wird
+(dann übernimmt `runsvdir`/`sv-enable` automatisch, kein manueller
+Start-Befehl nötig). Für den gelegentlichen Einsatz reicht das meist aus;
+für "läuft dauerhaft im Hintergrund, auch ganz ohne Termux zu öffnen"
+bräuchte es eine andere Automatisierungs-App (z. B. Tasker/MacroDroid mit
+Termux:Task-Plugin) - hier nicht weiter verfolgt.
 
 ### Implementiert
 
@@ -142,19 +142,27 @@ Termux aufrufen
 ls ~
 webshare-native
 webshare.env
-mkdir -p ~/.termux/service/webshare/
-
-$ mkdir -p ~/.termux/var/log/sv/webshare
-$ cat > ~/.termux/service/webshare/log/run
+$ 
+$ mkdir -p ~/.termux/service/webshare/
+$ cat > ~/.termux/service/webshare/run << 'EOF'
+#!/data/data/com.termux/files/usr/bin/sh
+. ~/webshare.env
+exec ~/webshare-native
+EOF
+$ 
+$ cat > ~/.termux/service/webshare/log/run << 'EOF'
 #!/data/data/com.termux/files/usr/bin/sh
 exec svlogd -tt ~/.termux/var/log/sv/webshare
-<ctrl>-D
+EOF
+$ 
 $ chmod +x ~/.termux/service/webshare/log/run
-$ cat >> .bashrc
+$ mkdir -p ~/.termux/var/log/sv/webshare
+$ 
+$ cat >> .bashrc << 'EOF'
 if ! pgrep -f "runsvdir /data/data/com.termux/files/home/.termux/service" > /dev/null; then
     runsvdir ~/.termux/service > ~/.termux/var/log/runsvdir.log 2>&1 &
 fi
-<ctrl>-D
+EOF
 $
 ~~~
 
