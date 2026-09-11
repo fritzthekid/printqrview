@@ -220,6 +220,25 @@ sich das Backend mit einer CUPS-konformen Discovery-Zeile statt eines Fehlers.
 Erneuter Build + `sudo ./deploy/install.sh` genügt für Updates (Binary wird
 überschrieben, bestehende Env-Datei bleibt erhalten).
 
+### Beliebige Dateien teilen über die CUPS-Warteschlange (`scripts/share.sh`)
+
+Ist die CUPS-Warteschlange einmal eingerichtet, kann `scripts/share.sh` als
+schlanke Alternative zu `sendfile` dienen: gleicher Aufruf, aber ohne dass
+der aufrufende Nutzer selbst an die Nextcloud-Zugangsdaten kommen muss -
+die liegen ausschließlich beim CUPS-Backend (`/etc/printtoqrview/backend.env`),
+`lp` reicht die Datei einfach durch:
+
+```bash
+scripts/share.sh pfad/zu/test.zip
+scripts/share.sh pfad/zu/test.zip "Anderer Titel.zip"
+cat test.zip | scripts/share.sh - test.zip
+```
+
+Intern nur ein Wrapper um `lp -d CloudPDF -t <titel> [datei]`. Funktioniert
+nur auf Rechnern mit eingerichteter Warteschlange (s. o.) - `sendfile`
+bleibt deshalb die unabhängige Variante (kein CUPS nötig), z. B. als
+Grundlage für `webshare` und `web/share.html`.
+
 ## Ausgabe auf einem externen Display (optional)
 
 Nach jedem erfolgreichen Lauf (Backend **und** `sendfile`, da beide dieselbe

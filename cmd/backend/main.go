@@ -15,6 +15,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/fritzthekid/printqrview/internal/config"
@@ -89,7 +91,22 @@ func doRun(argv []string, jobTitle string, cfg *config.Config, stdin io.Reader) 
 		return "", errEmptyPDF
 	}
 
-	filename := filenames.Generate(jobTitle, ".pdf", time.Now())
+	// CUPS liefert hier zwar meist echtes PDF, "lp -d <queue> beliebige.zip"
+	// reicht aber auch Nicht-PDF-Inhalte unverändert durch (das Backend
+	// prüft das nicht) - Endung deshalb am Inhalt statt blind an ".pdf"
+	// festmachen, sonst würde z. B. eine ZIP als "....zip.pdf" abgelegt.
+	ext := filenames.DetectExtension(pdfBytes)
+	title := jobTitle
+	// "lp <datei>" ohne eigenen -t-Titel übernimmt den Dateinamen als
+	// Jobtitel (z. B. "testdata.zip") - trägt der schon exakt die erkannte
+	// Endung, würde sie sonst doppelt drankommen ("...testdata.zip.zip").
+	// Bewusst nur bei exakter Übereinstimmung entfernen: ein Titel wie
+	// "Bericht.docx" bei echtem PDF-Inhalt bleibt unangetastet
+	// (".docx.pdf" trägt dort noch Information, die keine Dopplung ist).
+	if titleExt := filepath.Ext(title); titleExt != "" && strings.EqualFold(titleExt, ext) {
+		title = strings.TrimSuffix(title, titleExt)
+	}
+	filename := filenames.Generate(title, ext, time.Now())
 	remotePath, err := uploadFile(pdfBytes, filename, cfg)
 	if err != nil {
 		return "", err

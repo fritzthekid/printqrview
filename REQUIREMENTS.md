@@ -2,7 +2,7 @@
 
 | ID | Requirement | Abgedeckt durch |
 |----|-------------|-----------------|
-| R1 | Der Treiber wird als CUPS-Backend aufgerufen (`job-id user title copies options [file]`) und liest die PDF-Druckdaten entweder aus der übergebenen Datei oder aus stdin. Ohne Argumente (Geräteerkennung, z. B. `lpinfo -v`) meldet er sich mit einer CUPS-konformen Discovery-Zeile statt eines Fehlers. | `cmd/backend/main_test.go::TestReadsPDFFromFile`, `::TestReadsPDFFromStdin`, `::TestNoArgsPrintsDiscoveryLine` |
+| R1 | Der Treiber wird als CUPS-Backend aufgerufen (`job-id user title copies options [file]`) und liest die PDF-Druckdaten entweder aus der übergebenen Datei oder aus stdin. Ohne Argumente (Geräteerkennung, z. B. `lpinfo -v`) meldet er sich mit einer CUPS-konformen Discovery-Zeile statt eines Fehlers. Die Datei-Endung wird anhand des tatsächlichen Inhalts (Magic Numbers) statt blind `.pdf` gewählt, da `lp -d <queue> beliebige.zip` auch Nicht-PDF-Inhalte unverändert durchreicht. | `cmd/backend/main_test.go::TestReadsPDFFromFile`, `::TestReadsPDFFromStdin`, `::TestNoArgsPrintsDiscoveryLine`, `::TestNonPDFPayloadGetsMatchingExtension`, `::TestTitleExtensionKeptWhenItDiffersFromContent`, `internal/filenames/filenames_test.go::TestDetectExtension` |
 | R2 | Fehlt die PDF-Nutzlast (leere Daten), wird der Job mit Fehlerstatus (Exit-Code ≠ 0) abgebrochen, ohne einen Link auszugeben. | `cmd/backend/main_test.go::TestEmptyPDFIsRejected` |
 | R3 | Für jede Datei wird ein eindeutiger, dateisystemsicherer Dateiname aus Zeitstempel + Jobtitel erzeugt (Sonderzeichen werden ersetzt). | `internal/filenames/filenames_test.go` |
 | R4 | Das PDF wird per WebDAV PUT in ein konfigurierbares Zielverzeichnis der Nextcloud-Instanz hochgeladen. | `internal/nextcloud/client_test.go::TestUploadFileSuccess`, `::TestUploadFileFailureRaises` |
@@ -21,3 +21,6 @@
   außerhalb der automatisierten Tests – manuell/smoke-getestet, siehe README "Einbindung in CUPS".
 - `web/share.html` (R11) wurde nicht gegen eine echte Nextcloud-Instanz getestet (WebDAV/OCS-Aufrufe
   + CORS-Verhalten), da das reales Nextcloud-Setup erfordert – siehe README-Warnhinweis dort.
+- `scripts/share.sh` ist ein reiner `lp`-Wrapper (kein eigener Upload-Code) für Rechner mit
+  eingerichteter CUPS-Warteschlange – kein Go-Code, kein separater Test, manuell live gegen die
+  echte Warteschlange verifiziert (Datei-Argument und stdin, siehe README).
