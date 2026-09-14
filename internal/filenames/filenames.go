@@ -29,7 +29,7 @@ func Generate(jobTitle string, ext string, timestamp time.Time) string {
 // Numbers). Für Aufrufer ohne verlässliche Dateiendung - z. B. das
 // CUPS-Backend, dessen Jobtitel beliebiger Text statt eines Dateinamens ist
 // und dessen Nutzlast trotz "PDF-Backend" nicht zwingend ein PDF ist (siehe
-// R1: "lp -d CloudPDF beliebige.zip" reicht die Datei unverändert durch).
+// R1: "lp -d <queue> beliebige.zip" reicht die Datei unverändert durch).
 // Unbekannter Inhalt liefert ".bin".
 func DetectExtension(data []byte) string {
 	switch {

@@ -15,6 +15,21 @@
 #   das Feld ist nur vorbereitet).
 set -euo pipefail
 
+if [ $# -lt 2 ]; then
+  cat >&2 <<USAGE
+Aufruf: $0 <qr-png-datei> <link>
+
+Das ist der interne Ausgabe-Hook (siehe PRINTTOQRVIEW_DISPLAY_HOOK) - kein
+Upload-Tool. Er erwartet eine bereits fertige QR-Code-PNG (z. B. eine Datei
+aus /var/lib/printtoqrview/tmp/*.png) und reicht sie nur an cloudweb weiter,
+lädt selbst nichts nach Nextcloud hoch.
+
+Zum Teilen + Anzeigen einer beliebigen Datei stattdessen:
+  PRINTER=CloudWeb scripts/share.sh <datei>
+USAGE
+  exit 1
+fi
+
 PNG="$1"
 LINK="$2"
 

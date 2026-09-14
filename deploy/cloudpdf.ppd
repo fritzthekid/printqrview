@@ -1,20 +1,23 @@
 *PPD-Adobe: "4.3"
 *%
-*% CloudPDF - generische PDF-Passthrough-Warteschlange fuer printtoqrview.
-*% Analog zur Technik von cups-pdf: cupsFilter2 erklaert application/pdf zum
-*% Endformat, damit CUPS die Filterkette nach der PDF-Erzeugung stoppt und
-*% das fertige PDF direkt an das Backend uebergibt (kein Rastern noetig).
+*% printtoqrview - generische PDF-Passthrough-Warteschlange, gemeinsam
+*% genutzt von den Warteschlangen "CloudToRaspi" und "CloudWeb" (nur der
+*% Warteschlangen-Name entscheidet, welches Anzeige-Ziel bedient wird,
+*% siehe deploy/nextcloud-backend-wrapper.sh). Analog zur Technik von
+*% cups-pdf: cupsFilter2 erklaert application/pdf zum Endformat, damit CUPS
+*% die Filterkette nach der PDF-Erzeugung stoppt und das fertige PDF direkt
+*% an das Backend uebergibt (kein Rastern noetig).
 *%
 *FormatVersion: "4.3"
 *FileVersion: "1.0"
 *LanguageVersion: English
 *LanguageEncoding: ISOLatin1
-*PCFileName: "CLOUDPDF.PPD"
+*PCFileName: "PRNTQRV.PPD"
 *Manufacturer: "Generic"
-*Product: "(CloudPDF)"
-*ModelName: "CloudPDF"
-*ShortNickName: "CloudPDF"
-*NickName: "Generic CloudPDF - printtoqrview"
+*Product: "(printtoqrview)"
+*ModelName: "printtoqrview"
+*ShortNickName: "printtoqrview"
+*NickName: "Generic printtoqrview PDF-Passthrough"
 *PSVersion: "(3010.000) 0"
 *LanguageLevel: "3"
 *ColorDevice: True
