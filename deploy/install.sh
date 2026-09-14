@@ -49,6 +49,12 @@ if [ -f "$REPO_ROOT/raspi/scripts/toraspi.sh" ]; then
   echo "  -> zum Aktivieren PRINTTOQRVIEW_DISPLAY_HOOK in $ENV_FILE setzen"
 fi
 
+if [ -f "$REPO_ROOT/scripts/push-to-cloudweb.sh" ]; then
+  install -m 755 "$REPO_ROOT/scripts/push-to-cloudweb.sh" /usr/local/lib/printtoqrview/push-to-cloudweb.sh
+  echo "Ausgabe-Hook installiert: /usr/local/lib/printtoqrview/push-to-cloudweb.sh"
+  echo "  -> zum Aktivieren PRINTTOQRVIEW_DISPLAY_HOOK in $ENV_FILE setzen"
+fi
+
 install -m 700 "$REPO_ROOT/deploy/nextcloud-backend-wrapper.sh" "$BACKEND_LINK"
 chown root:root "$BACKEND_LINK"
 
@@ -67,6 +73,15 @@ if [ -x "$REPO_ROOT/webshare" ]; then
   systemctl enable --now printtoqrview-webshare
   systemctl restart printtoqrview-webshare
   WEBSHARE_INSTALLED=1
+fi
+
+if [ -x "$REPO_ROOT/cloudweb" ]; then
+  install -m 755 "$REPO_ROOT/cloudweb" /usr/local/lib/printtoqrview/cloudweb
+  install -m 644 "$REPO_ROOT/deploy/cloudweb.service" /etc/systemd/system/printtoqrview-cloudweb.service
+  systemctl daemon-reload
+  systemctl enable --now printtoqrview-cloudweb
+  systemctl restart printtoqrview-cloudweb
+  CLOUDWEB_INSTALLED=1
 fi
 
 systemctl restart cups
@@ -95,5 +110,15 @@ if [ "${WEBSHARE_INSTALLED:-0}" = "1" ]; then
 webshare läuft (systemctl status printtoqrview-webshare).
 URL (Port anpassen falls WEBSHARE_LISTEN != Default ":8642"):
   http://<IP-oder-Hostname-dieser-Maschine>${LISTEN:-:8642}/s/$TOKEN/
+EOF
+fi
+
+if [ "${CLOUDWEB_INSTALLED:-0}" = "1" ]; then
+  cat <<EOF
+
+cloudweb läuft (systemctl status printtoqrview-cloudweb).
+Anzeigeseite: http://<IP-oder-Hostname-dieser-Maschine>:40080/
+Zum Aktivieren als Anzeige-Hook PRINTTOQRVIEW_DISPLAY_HOOK in $ENV_FILE setzen:
+  PRINTTOQRVIEW_DISPLAY_HOOK=/usr/local/lib/printtoqrview/push-to-cloudweb.sh
 EOF
 fi

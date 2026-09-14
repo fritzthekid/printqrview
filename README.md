@@ -169,6 +169,36 @@ nach `/usr/local/lib/printtoqrview/toraspi.sh`; Aktivierung + Host/Timeout
 `convert` (ImageMagick) sowie ein passwortloser SSH-Zugang von root (CUPS
 führt das Backend als root aus) zum Pi.
 
+### Alternative: QR-Anzeige im Browser statt Pi-Display (`cmd/cloudweb`)
+
+Braucht kein zusätzliches Gerät: `cloudweb` ist ein kleiner, eigenständiger
+Web-Server (kein Nextcloud-Zugriff, keine Zugangsdaten nötig), der den
+zuletzt gepushten QR-Code + Link (+ optional Passwort) anzeigt und dabei
+per Polling (1×/Sekunde) automatisch aktuell bleibt - einfach in einem
+Browser offen lassen (z. B. auf einem alten Tablet, Kiosk-Rechner oder
+einfach in einem Tab).
+
+```bash
+go build -o cloudweb ./cmd/cloudweb
+./cloudweb
+# -> http://<diese-maschine>:40080/ im Browser offen lassen
+```
+
+Aktivierung als Ausgabe-Hook (schickt Ergebnisse dorthin statt an den Pi):
+
+```
+PRINTTOQRVIEW_DISPLAY_HOOK=/usr/local/lib/printtoqrview/push-to-cloudweb.sh
+CLOUDWEB_URL=http://127.0.0.1:40080
+```
+
+Der Push-Endpunkt (`POST /push`) nimmt nur Anfragen von `localhost` an -
+der Hook läuft ja auf demselben Host wie `cloudweb` selbst; die
+Anzeigeseite bleibt normal im Netz erreichbar. `deploy/install.sh`
+installiert `cloudweb` (falls gebaut) automatisch als systemd-Service
+`printtoqrview-cloudweb` (läuft mit `DynamicUser=yes`, braucht anders als
+`backend`/`webshare` keine Sonderrechte) sowie das Hook-Skript nach
+`/usr/local/lib/printtoqrview/push-to-cloudweb.sh`.
+
 ## Tests
 
 ```bash

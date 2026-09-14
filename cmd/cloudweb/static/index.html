@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>QR-Anzeige</title>
+<link rel="icon" type="image/png" sizes="32x32" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAMAAABEpIrGAAAAIGNIUk0AAHomAACAhAAA+gAAAIDoAAB1MAAA6mAAADqYAAAXcJy6UTwAAAELUExURSVj6yNi6iFg6iRi6iJg6iNh6kB27XKa8nOb8miT8S5p6yhl62CN8HSb8kt+7vr7/ufu/OPr/OTr/O/z/T517S9q687b+vT3/uXs/Pv8/pGw9VaG7z507T927Ttz7YSn8z917dHe+qK89jxz7Ud87tfi+5Sy9Xyh87LI97DG96/G91GC73CY8ZKx9anB97LH95Cv9DNt7NDd+pWz9f////7+/m6X8VKD783b+jlx7P39/m+Y8Thw7GqU8VyK8C5q6+3y/aa/9uTs/LzP+HGZ8XCZ8Xqf8uPq/JOy9ebt/C1p67rN+IWn8yJh6iZj6zJs7HOa8vH1/aG89pGw9FOE7/j6/vX3/tbi+/7+/rS0jssAAAABYktHRFjttcSOAAAAB3RJTUUH6gkODA4Xgo7WKwAAAUVJREFUOMvN09tWgkAYBWABDTxkMImaOYhplDqYIiBEHsq08tjJev83SRhIM6iVV+272fOxFvMzhEK/hyC9ULigwl4Rcfb3aAYnGnMEFU/su02SWK1J+oDlAADcIUg5T1B8OmMXIHuUI23AsMd5CKFQAKILiielVSGWTyUMuPzZeaVaQ2sgw3rlotFUWhgAWFFVTd8E7YyqGuYfQFXVLreAtgE4oWbp+tUm4Du61e15oF9AFkLo+sYDyuAWIWs4urt3QBTgPKQFDMYTFjfsdGavYykRR4jjSc5NtxAXuIh48b4FsVX8g1Dr+O/HeTfjua8IJ9JFnIlJ+AHy8elZfpFleeCO+htguBJ8bbf5IQgCANaXb5kO+gF8uTC7ALGhGEY3+B2y5aZpmr1REKCX74odLuCYkWROatmRpgv/WX/+vLOd7scHPfU2B+BQyecAAAAASUVORK5CYII=">
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #f4f5f7;
+    --card: #ffffff;
+    --text: #1a1a1a;
+    --muted: #666;
+    --border: #dcdfe4;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #17181c;
+      --card: #242629;
+      --text: #f1f1f1;
+      --muted: #a3a3a3;
+      --border: #3a3d42;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 24px;
+  }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 32px;
+    text-align: center;
+    max-width: 420px;
+    width: 100%;
+  }
+  #qr {
+    width: 100%;
+    max-width: 320px;
+    aspect-ratio: 1;
+    margin: 0 auto 20px;
+    background: #fff;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  #qr img { width: 100%; height: 100%; object-fit: contain; }
+  #qr .placeholder { color: #999; font-size: 0.95rem; padding: 20px; }
+  #link {
+    word-break: break-all;
+    font-size: 1rem;
+    margin-bottom: 8px;
+  }
+  #password {
+    font-size: 0.95rem;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  #password.hidden { display: none; }
+  #age {
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+</style>
+</head>
+<body>
+<main class="card">
+  <div id="qr"><div class="placeholder">Warte auf den nächsten Druck …</div></div>
+  <div id="link"></div>
+  <div id="password" class="hidden"></div>
+  <div id="age"></div>
+</main>
+
+<script>
+(function () {
+  'use strict';
+
+  var qrDiv = document.getElementById('qr');
+  var linkDiv = document.getElementById('link');
+  var passwordDiv = document.getElementById('password');
+  var ageDiv = document.getElementById('age');
+  var lastUpdatedAt = null;
+
+  function formatAge(updatedAt) {
+    if (!updatedAt) return '';
+    var seconds = Math.max(0, Math.round((Date.now() - new Date(updatedAt).getTime()) / 1000));
+    if (seconds < 60) return 'zuletzt aktualisiert vor ' + seconds + 's';
+    var minutes = Math.round(seconds / 60);
+    return 'zuletzt aktualisiert vor ' + minutes + ' min';
+  }
+
+  function poll() {
+    fetch('current.json', { cache: 'no-store' })
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        if (data.updated_at !== lastUpdatedAt) {
+          lastUpdatedAt = data.updated_at;
+          if (data.has_image) {
+            qrDiv.innerHTML = '<img src="current.png?t=' + Date.now() + '" alt="QR-Code">';
+          }
+          linkDiv.textContent = data.link || '';
+          if (data.password) {
+            passwordDiv.textContent = 'Passwort: ' + data.password;
+            passwordDiv.classList.remove('hidden');
+          } else {
+            passwordDiv.classList.add('hidden');
+          }
+        }
+        ageDiv.textContent = formatAge(data.updated_at);
+      })
+      .catch(function () { /* nächster Poll versucht's erneut */ });
+  }
+
+  poll();
+  setInterval(poll, 1000);
+})();
+</script>
+</body>
+</html>
