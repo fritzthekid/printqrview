@@ -4,6 +4,7 @@
 /webshare
 /webshare-arm64
 /webshare-native
+/cloudweb
 *.test
 *.out
 

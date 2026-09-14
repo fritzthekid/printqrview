@@ -96,11 +96,22 @@ Alle Bausteine liegen in `deploy/`:
 
 | Datei | Zweck |
 |-------|-------|
-| `deploy/install.sh` | Installiert Binary + Wrapper + PPD, legt die Warteschlange an (idempotent) |
-| `deploy/nextcloud-backend-wrapper.sh` | Landet als `/usr/lib/cups/backend/nextcloud`; lädt `NC_*`-Env-Vars nach, da CUPS Backends mit minimaler Umgebung startet |
+| `deploy/install.sh` | Installiert Binary + Wrapper + PPD, legt die Warteschlangen an (idempotent) |
+| `deploy/nextcloud-backend-wrapper.sh` | Landet als `/usr/lib/cups/backend/nextcloud`; lädt `NC_*`-Env-Vars nach (CUPS startet Backends mit minimaler Umgebung) und wählt den Anzeige-Hook anhand der Warteschlange |
 | `deploy/backend.env.example` | Vorlage für `/etc/printtoqrview/backend.env` (Zugangsdaten, `chmod 600 root:root`) |
-| `deploy/cloudpdf.ppd` | PPD für eine generische PDF-Passthrough-Warteschlange (Technik wie bei `cups-pdf`: `cupsFilter2` erklärt `application/pdf` zum Endformat, CUPS stoppt die Filterkette dort, statt zu rastern) |
+| `deploy/cloudpdf.ppd` | PPD für eine generische PDF-Passthrough-Warteschlange (Technik wie bei `cups-pdf`: `cupsFilter2` erklärt `application/pdf` zum Endformat, CUPS stoppt die Filterkette dort, statt zu rastern) - von beiden Warteschlangen gemeinsam genutzt |
 | `deploy/webshare.service` | systemd-Unit für `webshare` (siehe Abschnitt "Vom Handy teilen"), wird von `install.sh` mit installiert falls `webshare` gebaut wurde |
+| `deploy/cloudweb.service` | systemd-Unit für `cloudweb` (siehe Abschnitt "Ausgabe auf einem externen Display"), wird von `install.sh` mit installiert falls `cloudweb` gebaut wurde |
+
+`install.sh` legt **zwei** CUPS-Warteschlangen an, die denselben
+Backend-Code nutzen - einzig der Warteschlangen-Name (von CUPS als `$PRINTER`
+an den Wrapper übergeben) entscheidet, welcher Anzeige-Hook automatisch
+läuft:
+
+| Warteschlange | Anzeige-Ziel |
+|---|---|
+| `CloudToRaspi` | Raspberry-Pi-Framebuffer (`raspi/scripts/toraspi.sh`) |
+| `CloudWeb` | `cloudweb`-Web-Anzeige (`scripts/push-to-cloudweb.sh`) |
 
 Installation:
 
@@ -111,7 +122,8 @@ sudo ./deploy/install.sh
 sudo "$EDITOR" /etc/printtoqrview/backend.env
 sudo systemctl restart cups
 
-lp -d CloudPDF testdruck.pdf
+lp -d CloudToRaspi testdruck.pdf
+lp -d CloudWeb testdruck.pdf
 tail -f /var/lib/printtoqrview/tmp/links.log
 ```
 
@@ -123,7 +135,9 @@ Ohne Argumente aufgerufen (z. B. durch `lpinfo -v` zur Geräteerkennung) meldet
 sich das Backend mit einer CUPS-konformen Discovery-Zeile statt eines Fehlers.
 
 Erneuter Build + `sudo ./deploy/install.sh` genügt für Updates (Binary wird
-überschrieben, bestehende Env-Datei bleibt erhalten).
+überschrieben, bestehende Env-Datei bleibt erhalten). Eine frühere
+Einzel-Warteschlange namens `CloudPDF` wird beim ersten Lauf automatisch
+entfernt und durch die beiden obigen ersetzt.
 
 ### Beliebige Dateien teilen über die CUPS-Warteschlange (`scripts/share.sh`)
 
@@ -139,22 +153,36 @@ scripts/share.sh pfad/zu/test.zip "Anderer Titel.zip"
 cat test.zip | scripts/share.sh - test.zip
 ```
 
-Intern nur ein Wrapper um `lp -d CloudPDF -t <titel> [datei]`. Funktioniert
-nur auf Rechnern mit eingerichteter Warteschlange (s. o.) - `sendfile`
-bleibt deshalb die unabhängige Variante (kein CUPS nötig), z. B. als
-Grundlage für `webshare` und `web/share.html`.
+Intern nur ein Wrapper um `lp -d $PRINTER -t <titel> [datei]` (Default für
+`$PRINTER`: `CloudToRaspi`, per Umgebungsvariable `PRINTER=CloudWeb
+scripts/share.sh ...` umschaltbar). Funktioniert nur auf Rechnern mit
+eingerichteter Warteschlange (s. o.) - `sendfile` bleibt deshalb die
+unabhängige Variante (kein CUPS nötig), z. B. als Grundlage für `webshare`
+und `web/share.html`.
+
+`scripts/share-zip.sh` ist dieselbe Kurzform mit `PRINTER=CloudWeb` fest
+voreingestellt (Ergebnis erscheint im Browser statt auf dem Pi) - trotz des
+Namens nicht auf ZIP-Dateien beschränkt, `share.sh`/das Backend sind
+generisch.
 
 ## Ausgabe auf einem externen Display (optional)
 
-Nach jedem erfolgreichen Lauf (Backend **und** `sendfile`, da beide dieselbe
-`internal/output.Default` nutzen) kann zusätzlich ein externes Skript
-aufgerufen werden - z. B. um den QR-Code auf einem angeschlossenen Display
-auszugeben. Aktiviert wird das über `PRINTTOQRVIEW_DISPLAY_HOOK=<pfad>` in
-`backend.env`; der Hook wird als `<hook> <qr-png-pfad> <link>` aufgerufen,
-ein Fehlschlag lässt den Druckjob nicht scheitern.
+Nach jedem erfolgreichen Lauf (Backend **und** `sendfile`/`webshare`, da
+alle dieselbe `internal/output.Default` nutzen) kann zusätzlich ein
+externes Skript aufgerufen werden - z. B. um den QR-Code auf einem
+angeschlossenen Display auszugeben. Der Hook wird als
+`<hook> <qr-png-pfad> <link>` aufgerufen, ein Fehlschlag lässt den Druckjob
+nicht scheitern.
+
+Für die beiden CUPS-Warteschlangen (`CloudToRaspi`/`CloudWeb`, siehe
+"Einbindung in CUPS") entscheidet allein der gedruckte Warteschlangen-Name,
+welcher Hook läuft - `deploy/nextcloud-backend-wrapper.sh` setzt ihn
+automatisch. `PRINTTOQRVIEW_DISPLAY_HOOK=<pfad>` in `backend.env` bleibt
+der Weg dafür bei `sendfile`/`webshare` (dort gibt es keine Warteschlange)
+sowie als Fallback für andere/zukünftige Warteschlangen.
 
 Mitgeliefert ist `raspi/scripts/toraspi.sh` für die Ausgabe auf einem
-Raspberry-Pi-Display:
+Raspberry-Pi-Display (Warteschlange `CloudToRaspi`):
 
 | Verzeichnis | Läuft auf | Zweck |
 |-------------|-----------|-------|
@@ -168,6 +196,40 @@ nach `/usr/local/lib/printtoqrview/toraspi.sh`; Aktivierung + Host/Timeout
 `backend.env` (Vorlage in `deploy/backend.env.example`). Voraussetzung:
 `convert` (ImageMagick) sowie ein passwortloser SSH-Zugang von root (CUPS
 führt das Backend als root aus) zum Pi.
+
+### Alternative: QR-Anzeige im Browser statt Pi-Display (`cmd/cloudweb`, Warteschlange `CloudWeb`)
+
+Braucht kein zusätzliches Gerät: `cloudweb` ist ein kleiner, eigenständiger
+Web-Server (kein Nextcloud-Zugriff, keine Zugangsdaten nötig), der den
+zuletzt gepushten QR-Code + Link (+ optional Passwort) anzeigt und dabei
+per Polling (1×/Sekunde) automatisch aktuell bleibt - einfach in einem
+Browser offen lassen. Das kann irgendein Gerät im LAN sein, insbesondere
+auch ein Handy: es lädt dabei nichts hoch und braucht keine
+Zugangsdaten, reiner Betrachter.
+
+```bash
+go build -o cloudweb ./cmd/cloudweb
+./cloudweb
+# -> http://<diese-maschine>:40080/ im Browser offen lassen (z. B. auf dem Handy)
+```
+
+Über die Warteschlange `CloudWeb` drucken, um Ergebnisse dorthin zu
+schicken (statt `CloudToRaspi` für den Pi) - `PRINTTOQRVIEW_DISPLAY_HOOK`
+wird für diese Warteschlange automatisch gesetzt, siehe oben. Für
+`sendfile`/`webshare` stattdessen von Hand in `backend.env`:
+
+```
+PRINTTOQRVIEW_DISPLAY_HOOK=/usr/local/lib/printtoqrview/push-to-cloudweb.sh
+CLOUDWEB_URL=http://127.0.0.1:40080
+```
+
+Der Push-Endpunkt (`POST /push`) nimmt nur Anfragen von `localhost` an -
+der Hook läuft ja auf demselben Host wie `cloudweb` selbst; die
+Anzeigeseite bleibt normal im Netz erreichbar. `deploy/install.sh`
+installiert `cloudweb` (falls gebaut) automatisch als systemd-Service
+`printtoqrview-cloudweb` (läuft mit `DynamicUser=yes`, braucht anders als
+`backend`/`webshare` keine Sonderrechte) sowie das Hook-Skript nach
+`/usr/local/lib/printtoqrview/push-to-cloudweb.sh`.
 
 ## Tests
 

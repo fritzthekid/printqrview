@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Teilt eine Datei über die bereits eingerichtete CloudPDF-Warteschlange -
+# Teilt eine Datei über eine der bereits eingerichteten CUPS-Warteschlangen -
 # gleicher Aufruf wie sendfile, aber ohne dass der aufrufende Nutzer selbst
 # an die Nextcloud-Zugangsdaten kommen muss (die liegen ausschließlich beim
 # CUPS-Backend, siehe /etc/printtoqrview/backend.env). Setzt voraus, dass
@@ -9,9 +9,10 @@
 #   scripts/share.sh pfad/zu/test.zip
 #   scripts/share.sh pfad/zu/test.zip "Anderer Titel.zip"
 #   cat test.zip | scripts/share.sh - test.zip
+#   PRINTER=CloudWeb scripts/share.sh pfad/zu/test.zip   # andere Warteschlange
 set -euo pipefail
 
-PRINTER="${PRINTER:-CloudPDF}"
+PRINTER="${PRINTER:-CloudToRaspi}"
 
 if [ $# -lt 1 ]; then
   echo "Aufruf: $0 <pfad|-> [titel]" >&2

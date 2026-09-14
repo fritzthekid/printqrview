@@ -9,7 +9,6 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BACKEND_BIN="${1:-$REPO_ROOT/backend}"
-PRINTER_NAME="${PRINTER_NAME:-CloudPDF}"
 
 INSTALL_BIN=/usr/local/lib/printtoqrview/backend
 ENV_FILE=/etc/printtoqrview/backend.env
@@ -46,7 +45,17 @@ install -m 644 "$REPO_ROOT/deploy/cloudpdf.ppd" "$PPD_FILE"
 if [ -f "$REPO_ROOT/raspi/scripts/toraspi.sh" ]; then
   install -m 755 "$REPO_ROOT/raspi/scripts/toraspi.sh" /usr/local/lib/printtoqrview/toraspi.sh
   echo "Ausgabe-Hook installiert: /usr/local/lib/printtoqrview/toraspi.sh"
-  echo "  -> zum Aktivieren PRINTTOQRVIEW_DISPLAY_HOOK in $ENV_FILE setzen"
+  echo "  -> wird von der Warteschlange \"CloudToRaspi\" automatisch genutzt"
+  echo "     (siehe deploy/nextcloud-backend-wrapper.sh); für sendfile/webshare"
+  echo "     stattdessen PRINTTOQRVIEW_DISPLAY_HOOK in $ENV_FILE setzen"
+fi
+
+if [ -f "$REPO_ROOT/scripts/push-to-cloudweb.sh" ]; then
+  install -m 755 "$REPO_ROOT/scripts/push-to-cloudweb.sh" /usr/local/lib/printtoqrview/push-to-cloudweb.sh
+  echo "Ausgabe-Hook installiert: /usr/local/lib/printtoqrview/push-to-cloudweb.sh"
+  echo "  -> wird von der Warteschlange \"CloudWeb\" automatisch genutzt"
+  echo "     (siehe deploy/nextcloud-backend-wrapper.sh); für sendfile/webshare"
+  echo "     stattdessen PRINTTOQRVIEW_DISPLAY_HOOK in $ENV_FILE setzen"
 fi
 
 install -m 700 "$REPO_ROOT/deploy/nextcloud-backend-wrapper.sh" "$BACKEND_LINK"
@@ -69,20 +78,43 @@ if [ -x "$REPO_ROOT/webshare" ]; then
   WEBSHARE_INSTALLED=1
 fi
 
+if [ -x "$REPO_ROOT/cloudweb" ]; then
+  install -m 755 "$REPO_ROOT/cloudweb" /usr/local/lib/printtoqrview/cloudweb
+  install -m 644 "$REPO_ROOT/deploy/cloudweb.service" /etc/systemd/system/printtoqrview-cloudweb.service
+  systemctl daemon-reload
+  systemctl enable --now printtoqrview-cloudweb
+  systemctl restart printtoqrview-cloudweb
+  CLOUDWEB_INSTALLED=1
+fi
+
 systemctl restart cups
 
-lpadmin -p "$PRINTER_NAME" -E -v nextcloud:/ -P "$PPD_FILE" -o printer-is-shared=false
-cupsenable "$PRINTER_NAME"
-cupsaccept "$PRINTER_NAME"
+# Alte Default-Warteschlange aus früheren install.sh-Läufen entfernen -
+# ersetzt durch zwei fest auf ihr jeweiliges Anzeige-Ziel geroutete
+# Warteschlangen (siehe deploy/nextcloud-backend-wrapper.sh, routet anhand
+# des von CUPS gesetzten $PRINTER).
+if lpstat -p CloudPDF >/dev/null 2>&1; then
+  lpadmin -x CloudPDF
+  echo "Alte Warteschlange \"CloudPDF\" entfernt (ersetzt durch CloudToRaspi/CloudWeb)."
+fi
+
+for QUEUE in CloudToRaspi CloudWeb; do
+  lpadmin -p "$QUEUE" -E -v nextcloud:/ -P "$PPD_FILE" -o printer-is-shared=false
+  cupsenable "$QUEUE"
+  cupsaccept "$QUEUE"
+done
 
 cat <<EOF
 
-Fertig. Warteschlange "$PRINTER_NAME" zeigt auf $BACKEND_LINK.
+Fertig. Warteschlangen "CloudToRaspi" (-> Pi-Display) und "CloudWeb"
+(-> cloudweb-Anzeige) zeigen beide auf $BACKEND_LINK; welcher Hook läuft,
+entscheidet allein der gewählte Warteschlangen-Name.
 
 Falls noch nicht geschehen: Zugangsdaten eintragen in $ENV_FILE
 
 Testdruck:
-  lp -d $PRINTER_NAME $REPO_ROOT/testdruck.pdf
+  lp -d CloudToRaspi $REPO_ROOT/testdruck.pdf
+  lp -d CloudWeb $REPO_ROOT/testdruck.pdf
   tail -f /var/log/cups/error_log        # bei Problemen
   tail -f /var/lib/printtoqrview/tmp/links.log
 EOF
@@ -95,5 +127,15 @@ if [ "${WEBSHARE_INSTALLED:-0}" = "1" ]; then
 webshare läuft (systemctl status printtoqrview-webshare).
 URL (Port anpassen falls WEBSHARE_LISTEN != Default ":8642"):
   http://<IP-oder-Hostname-dieser-Maschine>${LISTEN:-:8642}/s/$TOKEN/
+EOF
+fi
+
+if [ "${CLOUDWEB_INSTALLED:-0}" = "1" ]; then
+  cat <<EOF
+
+cloudweb läuft (systemctl status printtoqrview-cloudweb).
+Anzeigeseite: http://<IP-oder-Hostname-dieser-Maschine>:40080/
+Zum Aktivieren als Anzeige-Hook PRINTTOQRVIEW_DISPLAY_HOOK in $ENV_FILE setzen:
+  PRINTTOQRVIEW_DISPLAY_HOOK=/usr/local/lib/printtoqrview/push-to-cloudweb.sh
 EOF
 fi

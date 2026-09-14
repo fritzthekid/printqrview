@@ -1,0 +1,16 @@
+[Unit]
+Description=printtoqrview QR-Anzeige (cloudweb)
+After=network.target
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/printtoqrview/backend.env
+ExecStart=/usr/local/lib/printtoqrview/cloudweb
+Restart=on-failure
+# Braucht anders als backend/webshare keine Sonderrechte (kein Dateizugriff,
+# keine Nextcloud-Zugangsdaten nötig) - läuft deshalb mit einem von systemd
+# erzeugten, unprivilegierten Wegwerf-Nutzer statt als root.
+DynamicUser=yes
+
+[Install]
+WantedBy=multi-user.target
