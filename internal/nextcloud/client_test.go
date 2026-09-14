@@ -186,6 +186,47 @@ func TestCreatePublicLinkSuccess(t *testing.T) {
 	}
 }
 
+func TestCreatePublicLinkSendsNoPasswordByDefault(t *testing.T) {
+	var gotOK, gotPassword bool
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		r.ParseForm()
+		_, gotOK = r.PostForm["password"]
+		gotPassword = r.PostForm.Get("password") != ""
+		json.NewEncoder(w).Encode(map[string]any{
+			"ocs": map[string]any{"data": map[string]any{"url": "https://cloud.orthos.selfhost.eu/s/abc123"}},
+		})
+	}))
+	defer srv.Close()
+
+	if _, err := CreatePublicLink("/PrinterUploads/file.pdf", testCfg(srv.URL)); err != nil {
+		t.Fatalf("CreatePublicLink() error = %v", err)
+	}
+	if gotOK || gotPassword {
+		t.Errorf("password wurde gesendet, obwohl keins gesetzt war")
+	}
+}
+
+func TestCreatePublicLinkWithPasswordSendsPassword(t *testing.T) {
+	var gotPassword string
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		r.ParseForm()
+		gotPassword = r.PostForm.Get("password")
+		json.NewEncoder(w).Encode(map[string]any{
+			"ocs": map[string]any{"data": map[string]any{"url": "https://cloud.orthos.selfhost.eu/s/abc123"}},
+		})
+	}))
+	defer srv.Close()
+
+	if _, err := CreatePublicLinkWithPassword("/PrinterUploads/file.pdf", testCfg(srv.URL), "usernameL2EERGG2FACHCUOQ"); err != nil {
+		t.Fatalf("CreatePublicLinkWithPassword() error = %v", err)
+	}
+	if gotPassword != "usernameL2EERGG2FACHCUOQ" {
+		t.Errorf("password = %q", gotPassword)
+	}
+}
+
 func TestCreatePublicLinkSetsExpireDate(t *testing.T) {
 	var gotExpire string
 

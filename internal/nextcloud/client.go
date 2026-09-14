@@ -118,6 +118,14 @@ type shareResponse struct {
 // Datei direkt herunterladen bzw. im Handy-PDF-Viewer öffnen, statt sie
 // zuerst im Web-Cloud-Viewer anzuzeigen.
 func CreatePublicLink(remotePath string, cfg *config.Config) (string, error) {
+	return CreatePublicLinkWithPassword(remotePath, cfg, "")
+}
+
+// CreatePublicLinkWithPassword ist wie CreatePublicLink, setzt aber
+// zusätzlich ein Freigabe-Passwort (Nextclouds OCS-Share-API kennt das
+// nativ), falls password nicht leer ist - siehe cmd/backend,
+// internal/sharepassword, scripts/share-to-web.sh.
+func CreatePublicLinkWithPassword(remotePath string, cfg *config.Config, password string) (string, error) {
 	shareURL := fmt.Sprintf("%s/ocs/v2.php/apps/files_sharing/api/v1/shares", cfg.BaseURL)
 	expireDate := time.Now().AddDate(0, 0, cfg.LinkExpireDays).Format("2006-01-02")
 
@@ -125,6 +133,9 @@ func CreatePublicLink(remotePath string, cfg *config.Config) (string, error) {
 	form.Set("path", remotePath)
 	form.Set("shareType", "3")
 	form.Set("expireDate", expireDate)
+	if password != "" {
+		form.Set("password", password)
+	}
 
 	req, err := http.NewRequest(http.MethodPost, shareURL, strings.NewReader(form.Encode()))
 	if err != nil {

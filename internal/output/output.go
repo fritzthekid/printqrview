@@ -27,6 +27,14 @@ var Hook = ""
 // Default schreibt link als Zeile in Dir/links.log, rendert ihn zusätzlich
 // als QR-Code-PNG in Dir und ruft danach - falls gesetzt - Hook auf.
 func Default(link string) error {
+	return DefaultWithPassword(link, "")
+}
+
+// DefaultWithPassword ist wie Default, hängt aber - falls password nicht
+// leer ist - ein drittes Argument an den Hook-Aufruf an (siehe
+// cmd/backend: Nextcloud-Freigaben mit zusätzlichem Freigabe-Passwort,
+// scripts/share-to-web.sh, internal/sharepassword).
+func DefaultWithPassword(link, password string) error {
 	if err := os.MkdirAll(Dir, 0o755); err != nil {
 		return err
 	}
@@ -47,7 +55,7 @@ func Default(link string) error {
 	}
 
 	if Hook != "" {
-		runHook(pngPath, link)
+		runHook(pngPath, link, password)
 	}
 	return nil
 }
@@ -55,8 +63,12 @@ func Default(link string) error {
 // runHook ruft Hook auf, meldet einen Fehlschlag aber nur als Warnung: Link +
 // QR-PNG sind zu diesem Zeitpunkt bereits erfolgreich abgelegt, ein
 // nicht erreichbares Display soll den Druckjob nicht scheitern lassen.
-func runHook(pngPath, link string) {
-	cmd := exec.Command(Hook, pngPath, link)
+func runHook(pngPath, link, password string) {
+	args := []string{pngPath, link}
+	if password != "" {
+		args = append(args, password)
+	}
+	cmd := exec.Command(Hook, args...)
 	cmd.Stdout = os.Stderr
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {

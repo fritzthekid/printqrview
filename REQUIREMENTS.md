@@ -15,6 +15,7 @@
 | R11 | Für den Fall, dass kein dauerhaft erreichbarer Server zur Verfügung steht, gibt es eine eigenständige, clientseitige HTML/JS-Seite (`web/share.html`), die direkt aus dem Browser (z. B. auf dem Handy) per WebDAV/OCS-API mit Nextcloud spricht - Zugangsdaten verlassen dabei nur den Browser des jeweiligen Geräts. | kein Go-Test (kein Go-Code); Kernlogik (Dateiname-Generierung, Basic-Auth-Encoding) manuell per Node.js gegen dieselben Testvektoren wie `internal/filenames` verifiziert, siehe README |
 | R12 | Alternative zum Pi-Framebuffer-Display: `cloudweb` ist ein eigenständiger Web-Server (keine Nextcloud-Zugangsdaten nötig), der den zuletzt per Ausgabe-Hook gepushten QR-Code + Link (+ optional Passwort) anzeigt und per Polling automatisch aktuell hält. Der Push-Endpunkt (`POST /push`) akzeptiert nur Anfragen von localhost. | `cmd/cloudweb/main_test.go` |
 | R13 | Pi-Display und `cloudweb` sind über zwei separate, gleichzeitig nutzbare CUPS-Warteschlangen erreichbar (`CloudToRaspi`, `CloudWeb`) statt über einen einzigen globalen Hook-Schalter - beide nutzen denselben Backend-Code, der von CUPS gesetzte `$PRINTER`-Name entscheidet im Wrapper-Skript, welcher Ausgabe-Hook läuft. | kein Go-Test (Shell/CUPS-Konfiguration); manuell live verifiziert (`lp -d CloudToRaspi ...` → Pi, `lp -d CloudWeb ...` → cloudweb) |
+| R14 | Über `scripts/share-to-web.sh <datei> [name]` kann eine `CloudWeb`-Freigabe zusätzlich mit einem Nextcloud-Freigabe-Passwort geschützt werden (nativ über die OCS-API, `CreatePublicLinkWithPassword`) - gedacht insbesondere für größere/sensiblere Dateien. `name` wird per CUPS-Job-Option (`-o nc-password-seed=<name>`) durchgereicht; das tatsächliche Passwort ist `name` + eine angezeigte Kurzform (`crypt`), die aus `name` + MAC-Adresse des Druckservers + eindeutigem Remote-Pfad abgeleitet wird (`internal/sharepassword`) - dieser gehärtete Seed fließt nur in `crypt` ein, nicht ins Passwort selbst (der Empfänger kennt ja nur `name` und das angezeigte `crypt`). Ohne MAC-Adresse wäre `crypt` allein aus dem an den Empfänger kommunizierten `name` berechenbar (keine echte 2FA) und bei jeder Freigabe mit demselben `name` identisch - beides durch Einmischen von MAC-Adresse + Remote-Pfad verhindert. Ohne `name`-Argument bleibt die Freigabe unpassphrasegeschützt wie zuvor. | `internal/sharepassword/sharepassword_test.go`, `cmd/backend/main_test.go::TestPasswordSeedFromOptionsDerivesPassword`, `::TestSameNameProducesDifferentCryptOnRepeatedRuns`, `::TestPasswordSeedRequestedButMACLookupFailsAborts`, `::TestNoPasswordSeedMeansNoPassword`, `internal/nextcloud/client_test.go::TestCreatePublicLinkWithPasswordSendsPassword`, `::TestCreatePublicLinkSendsNoPasswordByDefault` |
 
 ## Bewusst offen gelassen (vorläufig)
 - Ausgabe ist Log-Zeile + QR-Code-PNG (kein Desktop-Notify, keine E-Mail) – laut Vorgabe.
@@ -30,11 +31,10 @@
 - `scripts/share.sh` ist ein reiner `lp`-Wrapper (kein eigener Upload-Code) für Rechner mit
   eingerichteter CUPS-Warteschlange – kein Go-Code, kein separater Test, manuell live gegen die
   echte Warteschlange verifiziert (Datei-Argument und stdin, siehe README). Ziel-Warteschlange über
-  `PRINTER=...` umschaltbar (Default `CloudToRaspi`); `scripts/share-zip.sh` ist dieselbe Kurzform
-  mit `PRINTER=CloudWeb` voreingestellt (trotz des Namens nicht auf ZIP-Dateien beschränkt).
-- `scripts/push-to-cloudweb.sh` (Ausgabe-Hook für `cloudweb`, R12/R13) ist ein reiner `curl`-Wrapper,
-  kein Go-Code, manuell live end-to-end verifiziert (Push, `current.png`, `current.json`, Startseite).
-  Das `password`-Feld ist vorbereitet, aber aktuell erzeugt kein Teil dieses Projekts selbst
-  passwortgeschützte Freigabelinks – die Quelle für einen Wert müsste noch ergänzt werden. Bei
-  fehlenden Argumenten zeigt es eine Nutzungsanleitung inkl. Hinweis, dass es (anders als
-  `share.sh`) kein Upload-Tool ist, sondern eine bereits fertige QR-PNG erwartet.
+  `PRINTER=...` umschaltbar (Default `CloudToRaspi`); `scripts/share-to-web.sh` ist der Weg für
+  `CloudWeb` inkl. optionalem Passwortschutz (R14).
+- `scripts/push-to-cloudweb.sh` (Ausgabe-Hook für `cloudweb`, R12/R13/R14) ist ein reiner
+  `curl`-Wrapper, kein Go-Code, manuell live end-to-end verifiziert (Push, `current.png`,
+  `current.json`, Startseite, inkl. Passwort-Feld aus R14). Bei fehlenden Argumenten zeigt es eine
+  Nutzungsanleitung inkl. Hinweis, dass es (anders als `share.sh`) kein Upload-Tool ist, sondern eine
+  bereits fertige QR-PNG erwartet.

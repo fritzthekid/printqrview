@@ -37,9 +37,34 @@ Betrachter, im Unterschied zu `webshare`).
 - Bewusst **kein** Screen-Wake-Lock: Standard-Sperrzeit des Handys reicht,
   notfalls Handy kurz wieder entsperren.
 
-### Offen
+### Passwortschutz für CloudWeb-Freigaben (`scripts/share-to-web.sh`)
 
-- Das `password`-Feld ist im Protokoll/auf der Anzeigeseite vorbereitet,
-  aber es gibt noch keine Quelle dafür - aktuell erzeugt kein Teil des
-  Projekts passwortgeschützte Nextcloud-Freigabelinks. Erst relevant, falls
-  das noch gewünscht wird.
+**Hintergrund:** Für größere/sensiblere Dateien (z. B. ZIP-Archive) sollte
+der Link/QR-Code allein nicht ausreichen - zusätzlicher Passwortschutz per
+Nextcloud-Freigabe-Passwort, ohne dass ein zweites, unabhängig zu merkendes
+Passwort nötig wird.
+
+**Erledigt:**
+
+- `scripts/share-zip.sh` umbenannt in `scripts/share-to-web.sh`.
+- `internal/nextcloud.CreatePublicLinkWithPassword` nutzt Nextclouds
+  native OCS-Share-API-Unterstützung für Freigabe-Passwörter (`R14`).
+- Aufruf: `scripts/share-to-web.sh <datei> [name]` - `name` optional, ohne
+  ihn bleibt die Freigabe wie zuvor ohne Passwortschutz.
+- Passwort-Schema (`internal/sharepassword`): `crypt` = `base32(sha256(...))[:16]`,
+  angezeigt auf QR-Ausdruck/`cloudweb`; tatsächliches Nextcloud-Passwort =
+  `name + crypt` - nur das kann der Empfänger (kennt `name` mündlich +
+  sieht `crypt`) tatsächlich eintippen.
+- Echte Zwei-Faktor-Absicherung: `crypt` wird nicht nur aus `name`
+  berechnet, sondern aus `name + MAC-Adresse des Druckservers +
+  eindeutiger Remote-Pfad` - dadurch (a) für einen Angreifer, der nur
+  `name` kennt, nicht selbst nachrechenbar, und (b) bei jeder Freigabe mit
+  demselben `name` unterschiedlich (verhindert Wiederverwendung eines
+  einmal gesehenen `crypt`).
+- Live end-to-end getestet: Passwort wird bei Nextcloud korrekt gesetzt,
+  Download mit `name`+`crypt` funktioniert.
+- Ursprüngliche Idee eines zweiten, client-seitig zur Dateiverschlüsselung
+  genutzten Passworts wurde nicht weiterverfolgt - das MAC-Adressen-Schema
+  erreicht dieselbe Sicherheitseigenschaft (Angreifer kann `crypt` nicht
+  aus `name` allein herleiten) ohne den Aufwand einer echten
+  Client-Verschlüsselung.

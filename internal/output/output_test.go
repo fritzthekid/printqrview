@@ -67,6 +67,38 @@ func TestDefaultCallsHookWithPNGPathAndLink(t *testing.T) {
 	}
 }
 
+func TestDefaultWithPasswordCallsHookWithThreeArgs(t *testing.T) {
+	dir := t.TempDir()
+	origDir, origHook := Dir, Hook
+	Dir = dir
+	t.Cleanup(func() { Dir, Hook = origDir, origHook })
+
+	hookLog := filepath.Join(dir, "hook-call.log")
+	hookScript := filepath.Join(dir, "hook.sh")
+	if err := os.WriteFile(hookScript, []byte("#!/bin/sh\necho \"$1|$2|$3\" > \""+hookLog+"\"\n"), 0o755); err != nil {
+		t.Fatalf("WriteFile(hookScript) error = %v", err)
+	}
+	Hook = hookScript
+
+	link := "https://cloud.orthos.selfhost.eu/s/final-link"
+	if err := DefaultWithPassword(link, "L2EERGG2FACHCUOQ"); err != nil {
+		t.Fatalf("DefaultWithPassword() error = %v", err)
+	}
+
+	got, err := os.ReadFile(hookLog)
+	if err != nil {
+		t.Fatalf("hook was not called: %v", err)
+	}
+	pngMatches, _ := filepath.Glob(filepath.Join(dir, "*.png"))
+	if len(pngMatches) != 1 {
+		t.Fatalf("expected exactly one png, got %v", pngMatches)
+	}
+	want := pngMatches[0] + "|" + link + "|L2EERGG2FACHCUOQ\n"
+	if string(got) != want {
+		t.Errorf("hook args = %q, want %q", got, want)
+	}
+}
+
 func TestDefaultSucceedsEvenIfHookFails(t *testing.T) {
 	dir := t.TempDir()
 	origDir, origHook := Dir, Hook
