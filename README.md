@@ -22,7 +22,8 @@ PDF vor – wir müssen also keine PostScript/PCL-Interpretation selbst machen.
 | `internal/qrview` | QR-Code-PNG aus dem Freigabelink |
 | `internal/output` | Vorläufige Ausgabe: Link in `tmp/links.log` + QR-PNG in `tmp/` (R7) |
 | `cmd/backend` | CUPS-Backend-Einstiegspunkt |
-| `cmd/sendfile` | Einstiegspunkt für beliebige Dateien (kein Druckjob) |
+| `cmd/sendfile` | CLI-Einstiegspunkt für beliebige Dateien (kein Druckjob) |
+| `cmd/webshare` | HTTP-Einstiegspunkt für beliebige Dateien - z. B. vom Handy per Browser, ohne eigene Nextcloud-Zugangsdaten |
 
 ## Konfiguration (Umgebungsvariablen)
 
@@ -39,6 +40,7 @@ PDF vor – wir müssen also keine PostScript/PCL-Interpretation selbst machen.
 ```bash
 go build -o backend ./cmd/backend
 go build -o sendfile ./cmd/sendfile
+go build -o webshare ./cmd/webshare
 ```
 
 ## Lokal testen
@@ -66,6 +68,28 @@ Ohne Label wird der Dateiname aus dem Pfad übernommen (inkl. Endung); bei
 stdin (`-`) muss das Label die Endung liefern, sonst wird `.bin` verwendet.
 Nutzt dieselbe Konfiguration (`NC_*`-Umgebungsvariablen) wie das Backend.
 
+## Vom Handy teilen
+
+Drei Code-Pfade existieren dafür, je nach Situation unterschiedlich gut
+geeignet:
+
+| | `webshare` auf einem Server | `web/share.html` | `webshare` in Termux auf dem Handy |
+|---|---|---|---|
+| Braucht einen erreichbaren Server | Ja (LAN/VPN) | Nein | Nein |
+| Abhängig von CORS-Konfiguration der Nextcloud | Nein | Ja | Nein |
+
+In der Praxis hat sich **`webshare` nativ in Termux kompiliert** (dritte
+Spalte) als der Weg erwiesen, der ohne erreichbaren Server und ohne
+CORS-Voraussetzungen an die Nextcloud-Instanz auskommt - **siehe
+[`doc/android.md`](doc/android.md) für die vollständige Anleitung.**
+
+Die beiden anderen Code-Pfade bleiben im Repo (andere Konstellationen -
+z. B. ein tatsächlich erreichbarer Server, oder eine Nextcloud mit
+CORS-Unterstützung - können sie sinnvoll machen), sind aber nicht weiter
+in dieser README beschrieben: `cmd/webshare/main.go` (HTTP-Server-Variante)
+bzw. `web/share.html` + `deploy/gen-share-page.sh` (rein clientseitige
+Variante) sind selbsterklärend kommentiert.
+
 ## Einbindung in CUPS
 
 Alle Bausteine liegen in `deploy/`:
@@ -76,6 +100,7 @@ Alle Bausteine liegen in `deploy/`:
 | `deploy/nextcloud-backend-wrapper.sh` | Landet als `/usr/lib/cups/backend/nextcloud`; lädt `NC_*`-Env-Vars nach, da CUPS Backends mit minimaler Umgebung startet |
 | `deploy/backend.env.example` | Vorlage für `/etc/printtoqrview/backend.env` (Zugangsdaten, `chmod 600 root:root`) |
 | `deploy/cloudpdf.ppd` | PPD für eine generische PDF-Passthrough-Warteschlange (Technik wie bei `cups-pdf`: `cupsFilter2` erklärt `application/pdf` zum Endformat, CUPS stoppt die Filterkette dort, statt zu rastern) |
+| `deploy/webshare.service` | systemd-Unit für `webshare` (siehe Abschnitt "Vom Handy teilen"), wird von `install.sh` mit installiert falls `webshare` gebaut wurde |
 
 Installation:
 
@@ -99,6 +124,25 @@ sich das Backend mit einer CUPS-konformen Discovery-Zeile statt eines Fehlers.
 
 Erneuter Build + `sudo ./deploy/install.sh` genügt für Updates (Binary wird
 überschrieben, bestehende Env-Datei bleibt erhalten).
+
+### Beliebige Dateien teilen über die CUPS-Warteschlange (`scripts/share.sh`)
+
+Ist die CUPS-Warteschlange einmal eingerichtet, kann `scripts/share.sh` als
+schlanke Alternative zu `sendfile` dienen: gleicher Aufruf, aber ohne dass
+der aufrufende Nutzer selbst an die Nextcloud-Zugangsdaten kommen muss -
+die liegen ausschließlich beim CUPS-Backend (`/etc/printtoqrview/backend.env`),
+`lp` reicht die Datei einfach durch:
+
+```bash
+scripts/share.sh pfad/zu/test.zip
+scripts/share.sh pfad/zu/test.zip "Anderer Titel.zip"
+cat test.zip | scripts/share.sh - test.zip
+```
+
+Intern nur ein Wrapper um `lp -d CloudPDF -t <titel> [datei]`. Funktioniert
+nur auf Rechnern mit eingerichteter Warteschlange (s. o.) - `sendfile`
+bleibt deshalb die unabhängige Variante (kein CUPS nötig), z. B. als
+Grundlage für `webshare` und `web/share.html`.
 
 ## Ausgabe auf einem externen Display (optional)
 

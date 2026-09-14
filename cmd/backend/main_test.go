@@ -121,6 +121,62 @@ func TestReadsPDFFromFile(t *testing.T) {
 	}
 }
 
+func TestNonPDFPayloadGetsMatchingExtension(t *testing.T) {
+	// "lp -d <queue> beliebige.zip" reicht Nicht-PDF-Inhalte unverändert
+	// durch (das Backend prüft das nicht) - die Endung muss dann am
+	// tatsächlichen Inhalt hängen, nicht blind ".pdf" sein, sonst würde
+	// die ZIP als "....zip.pdf" abgelegt.
+	var gotFilename string
+	defer withFakes(
+		func(data []byte, filename string, cfg *config.Config) (string, error) {
+			gotFilename = filename
+			return "/PrinterUploads/x.zip", nil
+		},
+		func(remotePath string, cfg *config.Config) (string, error) {
+			return "https://cloud.orthos.selfhost.eu/s/xyz", nil
+		},
+	)()
+
+	argvZip := []string{"backend", "42", "eduard", "hummerbogen.zip", "1", ""}
+	rc := run(argvZip, testCfg, func(link string) error { return nil }, strings.NewReader("PK\x03\x04 zip-content"))
+
+	if rc != 0 {
+		t.Fatalf("rc = %d, want 0", rc)
+	}
+	if !strings.HasSuffix(gotFilename, ".zip") {
+		t.Errorf("gotFilename = %q, want .zip suffix (nicht .pdf)", gotFilename)
+	}
+	if strings.HasSuffix(gotFilename, ".zip.zip") {
+		t.Errorf("gotFilename = %q, Titel-Endung .zip hätte entfernt werden müssen (Dopplung)", gotFilename)
+	}
+}
+
+func TestTitleExtensionKeptWhenItDiffersFromContent(t *testing.T) {
+	// Ein Jobtitel wie "Bericht.docx" bei echtem PDF-Inhalt (normaler
+	// Druck-Fall) behält seine Endung im Titel - nur eine mit dem Inhalt
+	// exakt übereinstimmende Titel-Endung wird entfernt (s. o.).
+	var gotFilename string
+	defer withFakes(
+		func(data []byte, filename string, cfg *config.Config) (string, error) {
+			gotFilename = filename
+			return "/PrinterUploads/x.pdf", nil
+		},
+		func(remotePath string, cfg *config.Config) (string, error) {
+			return "https://cloud.orthos.selfhost.eu/s/xyz", nil
+		},
+	)()
+
+	argvDocx := []string{"backend", "42", "eduard", "Bericht.docx", "1", ""}
+	rc := run(argvDocx, testCfg, func(link string) error { return nil }, strings.NewReader("%PDF-1.4"))
+
+	if rc != 0 {
+		t.Fatalf("rc = %d, want 0", rc)
+	}
+	if !strings.HasSuffix(gotFilename, "_Bericht.docx.pdf") {
+		t.Errorf("gotFilename = %q, want suffix _Bericht.docx.pdf", gotFilename)
+	}
+}
+
 func TestReadsPDFFromStdin(t *testing.T) {
 	var gotData []byte
 	defer withFakes(

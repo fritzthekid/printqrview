@@ -65,3 +65,30 @@ func TestExtensionWithoutLeadingDotIsNormalized(t *testing.T) {
 		t.Errorf("Generate() = %q, want %q", name, want)
 	}
 }
+
+func TestDetectExtension(t *testing.T) {
+	cases := []struct {
+		name string
+		data []byte
+		want string
+	}{
+		{"PDF", []byte("%PDF-1.4 ..."), ".pdf"},
+		{"ZIP lokaler Dateikopf", []byte("PK\x03\x04 ..."), ".zip"},
+		{"ZIP leeres Archiv", []byte("PK\x05\x06 ..."), ".zip"},
+		{"ZIP mit Data-Descriptor", []byte("PK\x07\x08 ..."), ".zip"},
+		{"PNG", []byte("\x89PNG\r\n\x1a\n..."), ".png"},
+		{"JPEG", []byte{0xFF, 0xD8, 0xFF, 0xE0}, ".jpg"},
+		{"GIF87a", []byte("GIF87a..."), ".gif"},
+		{"GIF89a", []byte("GIF89a..."), ".gif"},
+		{"unbekannt", []byte("irgendwelche Bytes"), ".bin"},
+		{"leer", []byte{}, ".bin"},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			got := DetectExtension(c.data)
+			if got != c.want {
+				t.Errorf("DetectExtension(%q) = %q, want %q", c.data, got, c.want)
+			}
+		})
+	}
+}

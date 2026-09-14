@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Datei teilen</title>
+<!--
+  Icon: drei QR-Finder-Ecken auf dem Seiten-Blau, als Data-URI eingebettet
+  (kein zweiter Request/keine eigene Route nötig). Ohne das erzeugt "Zum
+  Startbildschirm hinzufügen" sonst ein Platzhalter-Icon aus dem ersten
+  Zeichen des Hostnamens - bei http://127.0.0.1:.../ zufällig eine "1".
+-->
+<link rel="icon" type="image/png" sizes="32x32" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAMAAABEpIrGAAAAIGNIUk0AAHomAACAhAAA+gAAAIDoAAB1MAAA6mAAADqYAAAXcJy6UTwAAAELUExURSVj6yNi6iFg6iRi6iJg6iNh6kB27XKa8nOb8miT8S5p6yhl62CN8HSb8kt+7vr7/ufu/OPr/OTr/O/z/T517S9q687b+vT3/uXs/Pv8/pGw9VaG7z507T927Ttz7YSn8z917dHe+qK89jxz7Ud87tfi+5Sy9Xyh87LI97DG96/G91GC73CY8ZKx9anB97LH95Cv9DNt7NDd+pWz9f////7+/m6X8VKD783b+jlx7P39/m+Y8Thw7GqU8VyK8C5q6+3y/aa/9uTs/LzP+HGZ8XCZ8Xqf8uPq/JOy9ebt/C1p67rN+IWn8yJh6iZj6zJs7HOa8vH1/aG89pGw9FOE7/j6/vX3/tbi+/7+/rS0jssAAAABYktHRFjttcSOAAAAB3RJTUUH6gkODA4Xgo7WKwAAAUVJREFUOMvN09tWgkAYBWABDTxkMImaOYhplDqYIiBEHsq08tjJev83SRhIM6iVV+272fOxFvMzhEK/hyC9ULigwl4Rcfb3aAYnGnMEFU/su02SWK1J+oDlAADcIUg5T1B8OmMXIHuUI23AsMd5CKFQAKILiielVSGWTyUMuPzZeaVaQ2sgw3rlotFUWhgAWFFVTd8E7YyqGuYfQFXVLreAtgE4oWbp+tUm4Du61e15oF9AFkLo+sYDyuAWIWs4urt3QBTgPKQFDMYTFjfsdGavYykRR4jjSc5NtxAXuIh48b4FsVX8g1Dr+O/HeTfjua8IJ9JFnIlJ+AHy8elZfpFleeCO+htguBJ8bbf5IQgCANaXb5kO+gF8uTC7ALGhGEY3+B2y5aZpmr1REKCX74odLuCYkWROatmRpgv/WX/+vLOd7scHPfU2B+BQyecAAAAASUVORK5CYII=">
+<link rel="icon" type="image/png" sizes="192x192" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMAAAADAAQMAAABoEv5EAAAAIGNIUk0AAHomAACAhAAA+gAAAIDoAAB1MAAA6mAAADqYAAAXcJy6UTwAAAAGUExURSVj6////y1UwPwAAAABYktHRAH/Ai3eAAAAB3RJTUUH6gkODA4Xgo7WKwAAAFxJREFUWMPt1kEKwCAMBdHc3Ny8tQSMLgNS8mFmEZC3EiRoRs16ojiMOLgiWE4bnlMOvustmFd0ALgAPV97GXpunzIQEcl3bDhl2KY2bD8AALgGOaWh5/YpA/3fC+67FRbYk9PJAAAAAElFTkSuQmCC">
+<link rel="apple-touch-icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMAAAADAAQMAAABoEv5EAAAAIGNIUk0AAHomAACAhAAA+gAAAIDoAAB1MAAA6mAAADqYAAAXcJy6UTwAAAAGUExURSVj6////y1UwPwAAAABYktHRAH/Ai3eAAAAB3RJTUUH6gkODA4Xgo7WKwAAAFxJREFUWMPt1kEKwCAMBdHc3Ny8tQSMLgNS8mFmEZC3EiRoRs16ojiMOLgiWE4bnlMOvustmFd0ALgAPV97GXpunzIQEcl3bDhl2KY2bD8AALgGOaWh5/YpA/3fC+67FRbYk9PJAAAAAElFTkSuQmCC">
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #f4f5f7;
+    --card: #ffffff;
+    --text: #1a1a1a;
+    --muted: #666;
+    --accent: #2563eb;
+    --accent-text: #ffffff;
+    --border: #dcdfe4;
+    --error: #b3261e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #17181c;
+      --card: #242629;
+      --text: #f1f1f1;
+      --muted: #a3a3a3;
+      --accent: #4f8dfd;
+      --accent-text: #0b1220;
+      --border: #3a3d42;
+      --error: #ff8a80;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    padding: 24px 16px 48px;
+  }
+  main {
+    width: 100%;
+    max-width: 480px;
+  }
+  h1 {
+    font-size: 1.3rem;
+    margin: 0 0 20px;
+    text-align: center;
+  }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  #pick-label {
+    display: block;
+    border: 2px dashed var(--border);
+    border-radius: 12px;
+    padding: 28px 12px;
+    text-align: center;
+    cursor: pointer;
+    color: var(--muted);
+    font-size: 1rem;
+  }
+  #pick-label.has-file { color: var(--text); border-style: solid; }
+  #file-input { display: none; }
+  input[type="text"] {
+    width: 100%;
+    padding: 12px;
+    margin-top: 12px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: transparent;
+    color: var(--text);
+    font-size: 1rem;
+  }
+  button {
+    width: 100%;
+    padding: 14px;
+    margin-top: 14px;
+    border: none;
+    border-radius: 10px;
+    background: var(--accent);
+    color: var(--accent-text);
+    font-size: 1.05rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  button:disabled { opacity: 0.5; cursor: default; }
+  button.secondary {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text);
+  }
+  #status {
+    text-align: center;
+    color: var(--muted);
+    margin-top: 12px;
+    min-height: 1.2em;
+  }
+  #status.error { color: var(--error); }
+  #result { display: none; text-align: center; }
+  #result img {
+    width: 100%;
+    max-width: 280px;
+    background: #fff;
+    border-radius: 12px;
+    padding: 12px;
+    margin: 8px auto 16px;
+    display: block;
+  }
+  #link {
+    word-break: break-all;
+    font-size: 0.9rem;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>Datei teilen</h1>
+
+  <div class="card" id="form-card">
+    <label id="pick-label" for="file-input">Datei auswählen …</label>
+    <input type="file" id="file-input">
+    <input type="text" id="label-input" placeholder="Titel (optional)">
+    <button id="send-btn" disabled>Senden</button>
+    <div id="status"></div>
+  </div>
+
+  <div class="card" id="result">
+    <img id="qr-img" alt="QR-Code">
+    <div id="link"></div>
+    <button id="copy-btn">Link kopieren</button>
+    <button id="reset-btn" class="secondary">Weitere Datei senden</button>
+  </div>
+</main>
+
+<script>
+(function () {
+  var fileInput = document.getElementById('file-input');
+  var pickLabel = document.getElementById('pick-label');
+  var labelInput = document.getElementById('label-input');
+  var sendBtn = document.getElementById('send-btn');
+  var status = document.getElementById('status');
+  var formCard = document.getElementById('form-card');
+  var result = document.getElementById('result');
+  var qrImg = document.getElementById('qr-img');
+  var linkDiv = document.getElementById('link');
+  var copyBtn = document.getElementById('copy-btn');
+  var resetBtn = document.getElementById('reset-btn');
+
+  fileInput.addEventListener('change', function () {
+    var f = fileInput.files[0];
+    if (f) {
+      pickLabel.textContent = f.name;
+      pickLabel.classList.add('has-file');
+      sendBtn.disabled = false;
+    } else {
+      pickLabel.textContent = 'Datei auswählen …';
+      pickLabel.classList.remove('has-file');
+      sendBtn.disabled = true;
+    }
+  });
+
+  sendBtn.addEventListener('click', function () {
+    var f = fileInput.files[0];
+    if (!f) return;
+
+    var data = new FormData();
+    data.append('file', f);
+    if (labelInput.value.trim()) {
+      data.append('label', labelInput.value.trim());
+    }
+
+    sendBtn.disabled = true;
+    status.textContent = 'Wird gesendet …';
+    status.classList.remove('error');
+
+    fetch('upload', { method: 'POST', body: data })
+      .then(function (res) {
+        return res.json().then(function (body) {
+          if (!res.ok) throw new Error(body.error || 'Fehler beim Senden');
+          return body;
+        });
+      })
+      .then(function (body) {
+        status.textContent = '';
+        qrImg.src = 'data:image/png;base64,' + body.qr_png_base64;
+        linkDiv.textContent = body.link;
+        formCard.style.display = 'none';
+        result.style.display = 'block';
+      })
+      .catch(function (err) {
+        status.textContent = err.message;
+        status.classList.add('error');
+        sendBtn.disabled = false;
+      });
+  });
+
+  copyBtn.addEventListener('click', function () {
+    navigator.clipboard.writeText(linkDiv.textContent).then(function () {
+      copyBtn.textContent = 'Kopiert!';
+      setTimeout(function () { copyBtn.textContent = 'Link kopieren'; }, 1500);
+    });
+  });
+
+  resetBtn.addEventListener('click', function () {
+    fileInput.value = '';
+    labelInput.value = '';
+    pickLabel.textContent = 'Datei auswählen …';
+    pickLabel.classList.remove('has-file');
+    sendBtn.disabled = true;
+    status.textContent = '';
+    result.style.display = 'none';
+    formCard.style.display = 'block';
+  });
+})();
+</script>
+</body>
+</html>

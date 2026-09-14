@@ -1,6 +1,9 @@
 # Go build artifacts
 /backend
 /sendfile
+/webshare
+/webshare-arm64
+/webshare-native
 *.test
 *.out
 
@@ -9,5 +12,6 @@
 
 # Lokale Testdateien
 testdruck.pdf
+testdata.zip
 ausgabe.png
 bck/

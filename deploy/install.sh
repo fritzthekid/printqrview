@@ -52,6 +52,23 @@ fi
 install -m 700 "$REPO_ROOT/deploy/nextcloud-backend-wrapper.sh" "$BACKEND_LINK"
 chown root:root "$BACKEND_LINK"
 
+if [ -x "$REPO_ROOT/webshare" ]; then
+  install -m 755 "$REPO_ROOT/webshare" /usr/local/lib/printtoqrview/webshare
+
+  if ! grep -q '^WEBSHARE_TOKEN=.\+' "$ENV_FILE" 2>/dev/null; then
+    TOKEN=$(openssl rand -hex 24)
+    sed -i '/^#WEBSHARE_TOKEN=/d' "$ENV_FILE"
+    printf '\n# von install.sh generiert (%s)\nWEBSHARE_TOKEN=%s\n' "$(date -Iseconds)" "$TOKEN" >> "$ENV_FILE"
+    echo "WEBSHARE_TOKEN generiert und in $ENV_FILE eingetragen."
+  fi
+
+  install -m 644 "$REPO_ROOT/deploy/webshare.service" /etc/systemd/system/printtoqrview-webshare.service
+  systemctl daemon-reload
+  systemctl enable --now printtoqrview-webshare
+  systemctl restart printtoqrview-webshare
+  WEBSHARE_INSTALLED=1
+fi
+
 systemctl restart cups
 
 lpadmin -p "$PRINTER_NAME" -E -v nextcloud:/ -P "$PPD_FILE" -o printer-is-shared=false
@@ -69,3 +86,14 @@ Testdruck:
   tail -f /var/log/cups/error_log        # bei Problemen
   tail -f /var/lib/printtoqrview/tmp/links.log
 EOF
+
+if [ "${WEBSHARE_INSTALLED:-0}" = "1" ]; then
+  TOKEN=$(grep '^WEBSHARE_TOKEN=' "$ENV_FILE" | tail -1 | cut -d= -f2-)
+  LISTEN=$(grep '^WEBSHARE_LISTEN=' "$ENV_FILE" | tail -1 | cut -d= -f2-)
+  cat <<EOF
+
+webshare läuft (systemctl status printtoqrview-webshare).
+URL (Port anpassen falls WEBSHARE_LISTEN != Default ":8642"):
+  http://<IP-oder-Hostname-dieser-Maschine>${LISTEN:-:8642}/s/$TOKEN/
+EOF
+fi
