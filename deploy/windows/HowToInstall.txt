@@ -1,0 +1,47 @@
+CloudWeb fuer Windows - Installation
+=====================================
+
+1) cloudweb.zip an eine beliebige Stelle entpacken, z. B. nach
+   C:\install\ (Rechtsklick auf die ZIP-Datei -> "Alle extrahieren").
+
+2) In einer ADMINISTRATOR-PowerShell (Start-Menu -> "PowerShell" ->
+   Rechtsklick -> "Als Administrator ausfuehren"), im entpackten Ordner:
+
+     Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+     .\install.ps1
+
+   Legt an: Drucker "CloudWeb", Windows-Dienst "CloudWeb", Konfigurations-
+   vorlage C:\ProgramData\printtoqrview\backend.env.
+
+3) In einer NORMALEN PowerShell (ohne "Als Administrator ausfuehren" -
+   einfach auf den PowerShell-Eintrag im Start-Menu klicken), im selben
+   entpackten Ordner:
+
+     Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+     .\userinstall.ps1
+
+   Richtet den Explorer-"Senden an"-Eintrag "CloudWeb Share" fuer dein
+   eigenes Benutzerkonto ein (bewusst getrennt von Schritt 2 - eine
+   elevierte Shell laeuft ggf. unter einem anderen Benutzerprofil).
+
+4) Zugangsdaten eintragen:
+
+     notepad C:\ProgramData\printtoqrview\backend.env
+
+   NC_BASE_URL, NC_USERNAME, NC_PASSWORD (Nextcloud-App-Passwort, nicht das
+   Konto-Passwort) eintragen - Werte OHNE Anfuehrungszeichen! Danach:
+
+     Restart-Service CloudWeb
+
+5) Testen:
+   - Drucken: eine beliebige Datei ueber den Drucker "CloudWeb" ausdrucken -
+     Link + QR-Code erscheinen automatisch auf http://localhost:40080/.
+   - Teilen: Rechtsklick auf eine Datei im Explorer -> "Senden an" ->
+     "CloudWeb Share" -> optional einen Namen fuer Passwortschutz eingeben.
+
+Bei Problemen: cloudweb.exe laesst sich auch interaktiv statt als Dienst
+starten (zeigt Log-Ausgaben direkt im Fenster):
+
+     Stop-Service CloudWeb
+     C:\ProgramData\printtoqrview\cloudweb.exe
+     (mit Strg+C beenden, danach: Start-Service CloudWeb)

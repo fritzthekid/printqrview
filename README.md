@@ -253,14 +253,31 @@ reines Go ohne cgo:
 deploy/windows/build.sh
 ```
 
-Landet in `dist/windows/` (`cloudweb.exe`, `fileshare.exe`,
-`install.ps1`, `backend.env.example`). Diesen Ordner auf den Windows-Rechner
-kopieren und dort als Administrator installieren:
+Landet in `dist/windows/` (`cloudweb.exe`, `fileshare.exe`, `install.ps1`,
+`userinstall.ps1`, `backend.env.example`, `HowToInstall.txt`) - plus
+gepackt als `cloudweb.zip`, praktisch für den Download auf den
+Windows-Rechner (einzelne `.exe`-Downloads lösen sonst jedes Mal eine
+SmartScreen-Warnung aus). Ausführliche Schritt-für-Schritt-Anleitung liegt
+als `HowToInstall.txt` im ZIP; kurz zusammengefasst:
+
+In einer **Administrator**-PowerShell (Drucker + Dienst, braucht erhöhte
+Rechte):
 
 ```powershell
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
 .\install.ps1
 ```
+
+Danach in einer **normalen** PowerShell (bewusst nicht elevated - eine
+elevierte Shell kann unter einem anderen Benutzerprofil laufen als der
+spätere "Senden an"-Nutzer):
+
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+.\userinstall.ps1
+```
+
+richtet den Explorer-"Senden an"-Eintrag "CloudWeb Share" ein.
 
 Danach `C:\ProgramData\printtoqrview\backend.env` mit den echten
 Nextcloud-Zugangsdaten füllen (Werte **ohne** Anführungszeichen - weder

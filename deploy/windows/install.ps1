@@ -12,9 +12,15 @@
       dabei unverändert (live verifiziert, siehe doc/anforderung_windows.md).
     - Windows-Dienst "CloudWeb" (cloudweb.exe: HTTP-Anzeige + Ordner-Watcher
       auf incoming.pdf), per golang.org/x/sys/windows/svc - kein NSSM nötig.
-    - Explorer-"Senden an"-Eintrag "CloudWeb Share" (fileshare.exe).
   Erwartet cloudweb.exe und fileshare.exe im selben Verzeichnis wie dieses
   Skript (z. B. nach dem Kopieren von einer Build-Freigabe).
+
+  Braucht Administrator-Rechte (Drucker, Dienst). Den Explorer-"Senden
+  an"-Eintrag richtet bewusst NICHT dieses Skript ein, sondern das separate
+  userinstall.ps1 (ohne Admin-Rechte auszuführen) - eine elevierte Shell
+  läuft ggf. unter einem anderen Benutzerprofil (%APPDATA%) als der Nutzer,
+  der später tatsächlich "Senden an" benutzt; das wurde live so vorgefunden
+  (siehe GitHub-Issue #7).
 #>
 
 $ErrorActionPreference = "Stop"
@@ -61,15 +67,11 @@ if ($existing) {
 New-Service -Name "CloudWeb" -BinaryPathName $CloudwebExe -DisplayName "CloudWeb (printtoqrview)" -StartupType Automatic | Out-Null
 Start-Service -Name "CloudWeb"
 
-Write-Host "Richte Explorer-'Senden an'-Eintrag ein ..."
-$sendTo = Join-Path $env:APPDATA "Microsoft\Windows\SendTo"
-$shell = New-Object -ComObject WScript.Shell
-$shortcut = $shell.CreateShortcut((Join-Path $sendTo "CloudWeb Share.lnk"))
-$shortcut.TargetPath = $FileshareExe
-$shortcut.Save()
-
 Write-Host ""
 Write-Host "Fertig. Zur Kontrolle:"
 Write-Host "  Get-Service CloudWeb"
 Write-Host "  Get-Printer | Select Name, DriverName, PortName"
 Write-Host "  http://localhost:40080/"
+Write-Host ""
+Write-Host "Noch offen: userinstall.ps1 in einer NICHT-elevierten PowerShell"
+Write-Host "ausfuehren (dein eigener Login), fuer den Explorer-'Senden an'-Eintrag."
