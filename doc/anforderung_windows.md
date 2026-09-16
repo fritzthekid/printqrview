@@ -43,6 +43,19 @@ Es wird ein File wie aktuell backend.env angelegt und eingelesen.
 - Druckertreiber und Sento-Funktion schreiben wie bei der Linux Variante auf das gleiche Ziel: 
   http://localhost:40080/
 
+**Alle Kriterien live in der Windows-10-VM verifiziert** (2026-09-16):
+- Drucker "CloudWeb" erscheint auswählbar, Original "Microsoft Print to PDF"
+  bleibt unverändert daneben bestehen.
+- `cloudweb.exe` läuft als installierter Windows-Dienst (`Start-Service
+  CloudWeb`, per `New-Service` angelegt) und verarbeitet Druckaufträge
+  (Ordner-Watcher auf `incoming.pdf`) genauso wie im interaktiven Testlauf.
+- Druck über "CloudWeb" erzeugt automatisch QR-Code + Link auf
+  `http://localhost:40080/`, ohne manuelles Zutun.
+- `fileshare.exe` (Explorer "Senden an") lädt eine ausgewählte Datei hoch,
+  fragt den optionalen Namen ab, erzeugt bei nicht-leerem Namen zusätzlich
+  eine Passwort-Kurzform (crypt) und pusht beides auf dieselbe Anzeigeseite -
+  wie vom Drucker.
+
 <!--
 Konkret, nach Möglichkeit als "Gegeben ... wenn ... dann ...".
 Wo ein Wert exakt berechnet werden soll: Beispiel-Ein-/Ausgabe als Code
