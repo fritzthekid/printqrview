@@ -90,6 +90,13 @@ Wie im Original sollte möglichst viel Code wiederverwendet werden. Als Programm
   `cloudweb.exe` sie beim Start selbst ein (`internal/envfile`, neues
   plattformneutrales Paket mit Windows-/Linux-Default-Pfad per Build-Tag -
   unter Linux ein No-op, dort bleibt systemd zuständig).
+  **Stolperfalle beim Testen live erlebt:** Werte in `backend.env` dürfen
+  **nicht** in Anführungszeichen stehen (`NC_PASSWORD=abc`, nicht
+  `NC_PASSWORD='abc'`) - weder `internal/envfile` noch systemds
+  `EnvironmentFile=` entfernen umschließende Quotes, die wären sonst
+  wörtlicher Bestandteil des Werts (führte zu stundenlangem
+  "Login failed", weil das eingetragene App-Passwort dadurch nie mit dem
+  tatsächlichen übereinstimmte).
 
 - Druckertreiber-Mechanismus: **zweiter, eigener Drucker mit dem vorhandenen
   Inbox-Treiber "Microsoft Print To PDF"** - der originale Drucker "Microsoft
