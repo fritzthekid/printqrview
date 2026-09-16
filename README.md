@@ -238,3 +238,32 @@ go test ./...
 ```
 
 Siehe `REQUIREMENTS.md` für die Zuordnung Requirement → Test.
+
+## Windows
+
+Siehe `doc/anforderung_windows.md` für Ziel/Entscheidungen (Druckertreiber
+als zweiter, eigener Drucker auf dem Inbox-Treiber "Microsoft Print To PDF",
+`cloudweb` als Windows-Dienst mit eingebautem Ordner-Watcher, `fileshare`
+als Explorer-"Senden an"-Werkzeug).
+
+Gebaut wird per Cross-Compile - kein Windows-Rechner zum Bauen nötig,
+reines Go ohne cgo:
+
+```bash
+deploy/windows/build.sh
+```
+
+Landet in `dist/windows/` (`cloudweb.exe`, `fileshare.exe`,
+`install.ps1`, `backend.env.example`). Diesen Ordner auf den Windows-Rechner
+kopieren und dort als Administrator installieren:
+
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+.\install.ps1
+```
+
+Danach `C:\ProgramData\printtoqrview\backend.env` mit den echten
+Nextcloud-Zugangsdaten füllen (Werte **ohne** Anführungszeichen - weder
+`internal/envfile` noch systemds `EnvironmentFile=` unter Linux entfernen
+sie, sie wären sonst wörtlicher Bestandteil des Werts) und
+`Restart-Service CloudWeb`.

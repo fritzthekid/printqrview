@@ -5,6 +5,8 @@
 /webshare-arm64
 /webshare-native
 /cloudweb
+/fileshare
+/dist/
 *.test
 *.out
 
