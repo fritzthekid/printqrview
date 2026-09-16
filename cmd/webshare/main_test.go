@@ -18,8 +18,8 @@ import (
 const testToken = "s3cr3t-token"
 
 var testCfg = &config.Config{
-	BaseURL:        "https://cloud.orthos.selfhost.eu",
-	Username:       "printer",
+	BaseURL:        "https://cloud.example.com",
+	Username:       "change-cloud-user",
 	Password:       "secret",
 	TargetDir:      "/PrinterUploads",
 	LinkExpireDays: 1,
@@ -109,7 +109,7 @@ func TestUploadSuccess(t *testing.T) {
 			return "/PrinterUploads/x.zip", nil
 		},
 		func(remotePath string, cfg *config.Config) (string, error) {
-			return "https://cloud.orthos.selfhost.eu/s/xyz/download", nil
+			return "https://cloud.example.com/s/xyz/download", nil
 		},
 	)()
 
@@ -132,7 +132,7 @@ func TestUploadSuccess(t *testing.T) {
 	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
 		t.Fatalf("json.Unmarshal() error = %v", err)
 	}
-	if body.Link != "https://cloud.orthos.selfhost.eu/s/xyz/download" {
+	if body.Link != "https://cloud.example.com/s/xyz/download" {
 		t.Errorf("Link = %q", body.Link)
 	}
 	png, err := base64.StdEncoding.DecodeString(body.QRPNGBase64)
@@ -157,7 +157,7 @@ func TestUploadUsesLabelOverride(t *testing.T) {
 			return "/PrinterUploads/x.bin", nil
 		},
 		func(remotePath string, cfg *config.Config) (string, error) {
-			return "https://cloud.orthos.selfhost.eu/s/xyz/download", nil
+			return "https://cloud.example.com/s/xyz/download", nil
 		},
 	)()
 

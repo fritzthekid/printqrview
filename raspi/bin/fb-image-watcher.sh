@@ -5,8 +5,6 @@
 
 set -euo pipefail
 
-mkdir -p /home/eduard/fb-drop
-
 WATCH_DIR="${WATCH_DIR:-$HOME/fb-drop}"
 FB_DEVICE="${FB_DEVICE:-/dev/fb1}"
 TIMEOUT="${TIMEOUT:-60}"

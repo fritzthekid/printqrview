@@ -12,7 +12,7 @@ set -euo pipefail
 PNG="$1"
 LINK="$2"
 
-RASPI_HOST="${RASPI_HOST:-donar.local}"
+RASPI_HOST="${RASPI_HOST:-raspi.local}"
 RASPI_DISPLAY_TIMEOUT="${RASPI_DISPLAY_TIMEOUT:-10}"
 OUT="$(dirname "$PNG")/ausgabe.png"
 

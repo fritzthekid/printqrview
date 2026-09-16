@@ -12,8 +12,8 @@ import (
 )
 
 var testCfg = &config.Config{
-	BaseURL:        "https://cloud.orthos.selfhost.eu",
-	Username:       "printer",
+	BaseURL:        "https://cloud.example.com",
+	Username:       "change-cloud-user",
 	Password:       "secret",
 	TargetDir:      "/PrinterUploads",
 	LinkExpireDays: 1,
@@ -63,7 +63,7 @@ func TestReadsArbitraryFileFromPath(t *testing.T) {
 			return "/PrinterUploads/x.zip", nil
 		},
 		func(remotePath string, cfg *config.Config) (string, error) {
-			return "https://cloud.orthos.selfhost.eu/s/xyz/download", nil
+			return "https://cloud.example.com/s/xyz/download", nil
 		},
 	)()
 
@@ -82,7 +82,7 @@ func TestReadsArbitraryFileFromPath(t *testing.T) {
 	if !strings.HasSuffix(gotFilename, "_test.zip") {
 		t.Errorf("gotFilename = %q, want suffix _test.zip", gotFilename)
 	}
-	if len(outputs) != 1 || outputs[0] != "https://cloud.orthos.selfhost.eu/s/xyz/download" {
+	if len(outputs) != 1 || outputs[0] != "https://cloud.example.com/s/xyz/download" {
 		t.Errorf("outputs = %v", outputs)
 	}
 }
@@ -97,7 +97,7 @@ func TestReadsFromStdinWithExplicitLabel(t *testing.T) {
 			return "/PrinterUploads/x.bin", nil
 		},
 		func(remotePath string, cfg *config.Config) (string, error) {
-			return "https://cloud.orthos.selfhost.eu/s/xyz/download", nil
+			return "https://cloud.example.com/s/xyz/download", nil
 		},
 	)()
 
@@ -128,7 +128,7 @@ func TestLabelWithoutExtensionFallsBackToBin(t *testing.T) {
 			return "/PrinterUploads/x.bin", nil
 		},
 		func(remotePath string, cfg *config.Config) (string, error) {
-			return "https://cloud.orthos.selfhost.eu/s/xyz/download", nil
+			return "https://cloud.example.com/s/xyz/download", nil
 		},
 	)()
 

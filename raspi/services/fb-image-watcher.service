@@ -5,7 +5,10 @@ After=multi-user.target
 [Service]
 Type=simple
 User=root
-Environment=WATCH_DIR=/home/eduard/fb-drop
+# WATCH_DIR muss auf das Home-Verzeichnis des Nutzers zeigen, an den die
+# Bilder per scp geliefert werden (Dienst läuft als root, $HOME wäre sonst
+# /root) - vor der Installation anpassen.
+Environment=WATCH_DIR=/home/CHANGE_ME/fb-drop
 Environment=FB_DEVICE=/dev/fb1
 Environment=TIMEOUT=10
 ExecStart=/usr/local/bin/fb-image-watcher.sh

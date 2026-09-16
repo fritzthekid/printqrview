@@ -11,7 +11,7 @@ var pngMagic = []byte{0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n'}
 func TestWritePNGCreatesValidPNG(t *testing.T) {
 	out := filepath.Join(t.TempDir(), "code.png")
 
-	if err := WritePNG("https://cloud.orthos.selfhost.eu/s/abc123", out); err != nil {
+	if err := WritePNG("https://cloud.example.com/s/abc123", out); err != nil {
 		t.Fatalf("WritePNG() error = %v", err)
 	}
 
@@ -30,7 +30,7 @@ func TestWritePNGCreatesValidPNG(t *testing.T) {
 }
 
 func TestPNGBytesReturnsValidPNG(t *testing.T) {
-	data, err := PNGBytes("https://cloud.orthos.selfhost.eu/s/abc123")
+	data, err := PNGBytes("https://cloud.example.com/s/abc123")
 	if err != nil {
 		t.Fatalf("PNGBytes() error = %v", err)
 	}

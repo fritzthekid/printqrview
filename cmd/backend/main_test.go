@@ -14,15 +14,15 @@ import (
 )
 
 var testCfg = &config.Config{
-	BaseURL:        "https://cloud.orthos.selfhost.eu",
-	Username:       "printer",
+	BaseURL:        "https://cloud.example.com",
+	Username:       "change-cloud-user",
 	Password:       "secret",
 	TargetDir:      "/PrinterUploads",
 	LinkExpireDays: 1,
 }
 
 func argv(filename string) []string {
-	a := []string{"backend", "42", "eduard", "Testdokument", "1", ""}
+	a := []string{"backend", "42", "alice", "Testdokument", "1", ""}
 	if filename != "" {
 		a = append(a, filename)
 	}
@@ -102,7 +102,7 @@ func TestReadsPDFFromFile(t *testing.T) {
 			return "/PrinterUploads/x.pdf", nil
 		},
 		func(remotePath string, cfg *config.Config, password string) (string, error) {
-			return "https://cloud.orthos.selfhost.eu/s/xyz", nil
+			return "https://cloud.example.com/s/xyz", nil
 		},
 	)()
 
@@ -118,7 +118,7 @@ func TestReadsPDFFromFile(t *testing.T) {
 	if string(gotData) != "%PDF-1.4 file-content" {
 		t.Errorf("gotData = %q", gotData)
 	}
-	if len(outputs) != 1 || outputs[0] != "https://cloud.orthos.selfhost.eu/s/xyz" {
+	if len(outputs) != 1 || outputs[0] != "https://cloud.example.com/s/xyz" {
 		t.Errorf("outputs = %v", outputs)
 	}
 }
@@ -135,11 +135,11 @@ func TestNonPDFPayloadGetsMatchingExtension(t *testing.T) {
 			return "/PrinterUploads/x.zip", nil
 		},
 		func(remotePath string, cfg *config.Config, password string) (string, error) {
-			return "https://cloud.orthos.selfhost.eu/s/xyz", nil
+			return "https://cloud.example.com/s/xyz", nil
 		},
 	)()
 
-	argvZip := []string{"backend", "42", "eduard", "hummerbogen.zip", "1", ""}
+	argvZip := []string{"backend", "42", "alice", "hummerbogen.zip", "1", ""}
 	rc := run(argvZip, testCfg, func(link, password string) error { return nil }, strings.NewReader("PK\x03\x04 zip-content"))
 
 	if rc != 0 {
@@ -164,11 +164,11 @@ func TestTitleExtensionKeptWhenItDiffersFromContent(t *testing.T) {
 			return "/PrinterUploads/x.pdf", nil
 		},
 		func(remotePath string, cfg *config.Config, password string) (string, error) {
-			return "https://cloud.orthos.selfhost.eu/s/xyz", nil
+			return "https://cloud.example.com/s/xyz", nil
 		},
 	)()
 
-	argvDocx := []string{"backend", "42", "eduard", "Bericht.docx", "1", ""}
+	argvDocx := []string{"backend", "42", "alice", "Bericht.docx", "1", ""}
 	rc := run(argvDocx, testCfg, func(link, password string) error { return nil }, strings.NewReader("%PDF-1.4"))
 
 	if rc != 0 {
@@ -195,12 +195,12 @@ func TestPasswordSeedFromOptionsDerivesPassword(t *testing.T) {
 		},
 		func(remotePath string, cfg *config.Config, password string) (string, error) {
 			gotPassword = password
-			return "https://cloud.orthos.selfhost.eu/s/xyz", nil
+			return "https://cloud.example.com/s/xyz", nil
 		},
 	)()
 
 	var gotCrypt string
-	argvWithSeed := []string{"backend", "42", "eduard", "testdata.zip", "1", "nc-password-seed=username"}
+	argvWithSeed := []string{"backend", "42", "alice", "testdata.zip", "1", "nc-password-seed=username"}
 	rc := run(argvWithSeed, testCfg, func(link, password string) error {
 		gotCrypt = password
 		return nil
@@ -236,11 +236,11 @@ func TestSameNameProducesDifferentCryptOnRepeatedRuns(t *testing.T) {
 			return fmt.Sprintf("/PrinterUploads/run%d.zip", callCount), nil
 		},
 		func(remotePath string, cfg *config.Config, password string) (string, error) {
-			return "https://cloud.orthos.selfhost.eu/s/xyz", nil
+			return "https://cloud.example.com/s/xyz", nil
 		},
 	)()
 
-	argvWithSeed := []string{"backend", "42", "eduard", "testdata.zip", "1", "nc-password-seed=username"}
+	argvWithSeed := []string{"backend", "42", "alice", "testdata.zip", "1", "nc-password-seed=username"}
 
 	var crypt1, crypt2 string
 	rc1 := run(argvWithSeed, testCfg, func(link, password string) error { crypt1 = password; return nil }, strings.NewReader("PK\x03\x04 zip-content"))
@@ -270,7 +270,7 @@ func TestPasswordSeedRequestedButMACLookupFailsAborts(t *testing.T) {
 		nil,
 	)()
 
-	argvWithSeed := []string{"backend", "42", "eduard", "testdata.zip", "1", "nc-password-seed=username"}
+	argvWithSeed := []string{"backend", "42", "alice", "testdata.zip", "1", "nc-password-seed=username"}
 	rc := run(argvWithSeed, testCfg, func(link, password string) error { return nil }, strings.NewReader("PK\x03\x04 zip-content"))
 
 	if rc != 1 {
@@ -286,7 +286,7 @@ func TestNoPasswordSeedMeansNoPassword(t *testing.T) {
 		},
 		func(remotePath string, cfg *config.Config, password string) (string, error) {
 			gotPassword = password
-			return "https://cloud.orthos.selfhost.eu/s/xyz", nil
+			return "https://cloud.example.com/s/xyz", nil
 		},
 	)()
 
@@ -315,7 +315,7 @@ func TestReadsPDFFromStdin(t *testing.T) {
 			return "/PrinterUploads/x.pdf", nil
 		},
 		func(remotePath string, cfg *config.Config, password string) (string, error) {
-			return "https://cloud.orthos.selfhost.eu/s/xyz", nil
+			return "https://cloud.example.com/s/xyz", nil
 		},
 	)()
 
@@ -360,7 +360,7 @@ func TestFullFlowOutputsLink(t *testing.T) {
 			return "/PrinterUploads/x.pdf", nil
 		},
 		func(remotePath string, cfg *config.Config, password string) (string, error) {
-			return "https://cloud.orthos.selfhost.eu/s/final-link", nil
+			return "https://cloud.example.com/s/final-link", nil
 		},
 	)()
 
@@ -373,7 +373,7 @@ func TestFullFlowOutputsLink(t *testing.T) {
 	if rc != 0 {
 		t.Fatalf("rc = %d, want 0", rc)
 	}
-	if len(outputs) != 1 || outputs[0] != "https://cloud.orthos.selfhost.eu/s/final-link" {
+	if len(outputs) != 1 || outputs[0] != "https://cloud.example.com/s/final-link" {
 		t.Errorf("outputs = %v", outputs)
 	}
 }

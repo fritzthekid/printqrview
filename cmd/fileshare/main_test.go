@@ -16,8 +16,8 @@ import (
 )
 
 var testCfg = &config.Config{
-	BaseURL:        "https://cloud.orthos.selfhost.eu",
-	Username:       "printer",
+	BaseURL:        "https://cloud.example.com",
+	Username:       "change-cloud-user",
 	Password:       "secret",
 	TargetDir:      "/PrinterUploads",
 	LinkExpireDays: 1,
@@ -74,7 +74,7 @@ func TestUploadsFileWithNameAndPushesLink(t *testing.T) {
 		},
 		func(remotePath string, cfg *config.Config, password string) (string, error) {
 			gotPassword = password
-			return "https://cloud.orthos.selfhost.eu/s/xyz/download", nil
+			return "https://cloud.example.com/s/xyz/download", nil
 		},
 		func() (string, error) { return "mac", nil },
 		func(link, crypt string) error {
@@ -84,18 +84,18 @@ func TestUploadsFileWithNameAndPushesLink(t *testing.T) {
 	)()
 
 	var stdout bytes.Buffer
-	rc := run([]string{"fileshare", path, "eduard"}, testCfg, nil, &stdout)
+	rc := run([]string{"fileshare", path, "alice"}, testCfg, nil, &stdout)
 
 	if rc != 0 {
 		t.Fatalf("rc = %d, want 0, stdout=%q", rc, stdout.String())
 	}
-	if gotPassword != "eduard"+pushedCrypt {
-		t.Errorf("password = %q, want name+crypt = %q", gotPassword, "eduard"+pushedCrypt)
+	if gotPassword != "alice"+pushedCrypt {
+		t.Errorf("password = %q, want name+crypt = %q", gotPassword, "alice"+pushedCrypt)
 	}
 	if pushedCrypt == "" {
 		t.Error("crypt ist leer, obwohl ein Name angegeben wurde")
 	}
-	if pushedLink != "https://cloud.orthos.selfhost.eu/s/xyz/download" {
+	if pushedLink != "https://cloud.example.com/s/xyz/download" {
 		t.Errorf("pushedLink = %q", pushedLink)
 	}
 	if !strings.Contains(stdout.String(), pushedLink) || !strings.Contains(stdout.String(), pushedCrypt) {
@@ -117,7 +117,7 @@ func TestPromptsForNameWhenNotGivenAsArgument(t *testing.T) {
 		},
 		func(remotePath string, cfg *config.Config, password string) (string, error) {
 			gotPassword = password
-			return "https://cloud.orthos.selfhost.eu/s/xyz/download", nil
+			return "https://cloud.example.com/s/xyz/download", nil
 		},
 		func() (string, error) { return "mac", nil },
 		func(link, crypt string) error { return nil },
@@ -149,7 +149,7 @@ func TestEmptyNameMeansNoPassword(t *testing.T) {
 		},
 		func(remotePath string, cfg *config.Config, password string) (string, error) {
 			gotPassword = password
-			return "https://cloud.orthos.selfhost.eu/s/xyz/download", nil
+			return "https://cloud.example.com/s/xyz/download", nil
 		},
 		func() (string, error) { macCalled = true; return "mac", nil },
 		func(link, crypt string) error {
@@ -193,7 +193,7 @@ func TestMACLookupFailureAborts(t *testing.T) {
 	var stdout bytes.Buffer
 	var rc int
 	stderr := captureStderr(t, func() {
-		rc = run([]string{"fileshare", path, "eduard"}, testCfg, nil, &stdout)
+		rc = run([]string{"fileshare", path, "alice"}, testCfg, nil, &stdout)
 	})
 
 	if rc != 1 {
@@ -258,7 +258,7 @@ func TestPushFailureDoesNotFailTheCommand(t *testing.T) {
 			return "/PrinterUploads/x.zip", nil
 		},
 		func(remotePath string, cfg *config.Config, password string) (string, error) {
-			return "https://cloud.orthos.selfhost.eu/s/xyz/download", nil
+			return "https://cloud.example.com/s/xyz/download", nil
 		},
 		nil,
 		func(link, crypt string) error { return errNoData },
@@ -270,7 +270,7 @@ func TestPushFailureDoesNotFailTheCommand(t *testing.T) {
 	if rc != 0 {
 		t.Fatalf("rc = %d, want 0 (Push-Fehler darf die Freigabe nicht scheitern lassen)", rc)
 	}
-	if !strings.Contains(stdout.String(), "https://cloud.orthos.selfhost.eu/s/xyz/download") {
+	if !strings.Contains(stdout.String(), "https://cloud.example.com/s/xyz/download") {
 		t.Errorf("stdout sollte den Link trotzdem enthalten: %q", stdout.String())
 	}
 }

@@ -38,9 +38,9 @@ func TestPasswordIsNamePlusCryptNotHardenedSeedPlusCrypt(t *testing.T) {
 	// tatsächliche Passwort darf deshalb NICHT den (dem Empfänger
 	// unbekannten) hardenedSeed enthalten, sonst kann er es nie korrekt
 	// eintippen (genau dieser Bug wurde live beobachtet und hier fixiert).
-	crypt, password := Derive("eduard", "eduard+mac-adresse+remote-path")
-	if password != "eduard"+crypt {
-		t.Errorf("password = %q, want name+crypt = %q", password, "eduard"+crypt)
+	crypt, password := Derive("alice", "alice+mac-adresse+remote-path")
+	if password != "alice"+crypt {
+		t.Errorf("password = %q, want name+crypt = %q", password, "alice"+crypt)
 	}
 }
 

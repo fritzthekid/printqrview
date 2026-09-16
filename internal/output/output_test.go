@@ -13,7 +13,7 @@ func TestDefaultWritesLinkLogAndQR(t *testing.T) {
 	Dir = dir
 	t.Cleanup(func() { Dir = orig })
 
-	link := "https://cloud.orthos.selfhost.eu/s/final-link"
+	link := "https://cloud.example.com/s/final-link"
 	if err := Default(link); err != nil {
 		t.Fatalf("Default() error = %v", err)
 	}
@@ -48,7 +48,7 @@ func TestDefaultCallsHookWithPNGPathAndLink(t *testing.T) {
 	}
 	Hook = hookScript
 
-	link := "https://cloud.orthos.selfhost.eu/s/final-link"
+	link := "https://cloud.example.com/s/final-link"
 	if err := Default(link); err != nil {
 		t.Fatalf("Default() error = %v", err)
 	}
@@ -80,7 +80,7 @@ func TestDefaultWithPasswordCallsHookWithThreeArgs(t *testing.T) {
 	}
 	Hook = hookScript
 
-	link := "https://cloud.orthos.selfhost.eu/s/final-link"
+	link := "https://cloud.example.com/s/final-link"
 	if err := DefaultWithPassword(link, "L2EERGG2FACHCUOQ"); err != nil {
 		t.Fatalf("DefaultWithPassword() error = %v", err)
 	}
@@ -111,7 +111,7 @@ func TestDefaultSucceedsEvenIfHookFails(t *testing.T) {
 	}
 	Hook = hookScript
 
-	if err := Default("https://cloud.orthos.selfhost.eu/s/final-link"); err != nil {
+	if err := Default("https://cloud.example.com/s/final-link"); err != nil {
 		t.Fatalf("Default() error = %v, want nil even though hook fails", err)
 	}
 }

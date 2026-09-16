@@ -29,7 +29,7 @@ PDF vor – wir müssen also keine PostScript/PCL-Interpretation selbst machen.
 
 | Variable | Pflicht | Beschreibung |
 |----------|---------|--------------|
-| `NC_BASE_URL` | ja | z. B. `https://cloud.orthos.selfhost.eu` |
+| `NC_BASE_URL` | ja | z. B. `https://cloud.example.com` |
 | `NC_USERNAME` | ja | Nextcloud-Benutzer (für Upload + Freigabe) |
 | `NC_PASSWORD` | ja | Nextcloud **App-Passwort** (nicht das Konto-Passwort!) |
 | `NC_TARGET_DIR` | nein | Zielordner, Default `/PrinterUploads` |
@@ -46,10 +46,10 @@ go build -o webshare ./cmd/webshare
 ## Lokal testen
 
 ```bash
-export NC_BASE_URL=https://cloud.orthos.selfhost.eu
-export NC_USERNAME=printer
+export NC_BASE_URL=https://cloud.example.com
+export NC_USERNAME=change-cloud-user
 export NC_PASSWORD=<app-passwort>
-cat testdruck.pdf | ./backend job1 eduard "Testdruck" 1 ""
+cat testdruck.pdf | ./backend job1 alice "Testdruck" 1 ""
 ```
 
 ## Beliebige Dateien teilen (ohne Drucker)

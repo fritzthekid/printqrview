@@ -16,7 +16,7 @@ import (
 func testCfg(baseURL string) *config.Config {
 	return &config.Config{
 		BaseURL:        baseURL,
-		Username:       "printer",
+		Username:       "change-cloud-user",
 		Password:       "secret",
 		TargetDir:      "/PrinterUploads",
 		LinkExpireDays: 1,
@@ -51,14 +51,14 @@ func TestUploadFileSuccess(t *testing.T) {
 	if remotePath != "/PrinterUploads/20260907-143005_test.pdf" {
 		t.Errorf("remotePath = %q", remotePath)
 	}
-	wantURL := "/remote.php/dav/files/printer/PrinterUploads/20260907-143005_test.pdf"
+	wantURL := "/remote.php/dav/files/change-cloud-user/PrinterUploads/20260907-143005_test.pdf"
 	if putURL != wantURL {
 		t.Errorf("PUT URL = %q, want %q", putURL, wantURL)
 	}
 	if putMethod != http.MethodPut {
 		t.Errorf("method = %q", putMethod)
 	}
-	if putUser != "printer" || putPass != "secret" {
+	if putUser != "change-cloud-user" || putPass != "secret" {
 		t.Errorf("unexpected auth: %s/%s", putUser, putPass)
 	}
 	if string(putBody) != "%PDF-1.4 ..." {
@@ -109,7 +109,7 @@ func TestUploadCreatesTargetDir(t *testing.T) {
 	if mkcolMethod != "MKCOL" {
 		t.Errorf("method = %q, want MKCOL", mkcolMethod)
 	}
-	if mkcolPath != "/remote.php/dav/files/printer/PrinterUploads" {
+	if mkcolPath != "/remote.php/dav/files/change-cloud-user/PrinterUploads" {
 		t.Errorf("path = %q", mkcolPath)
 	}
 }
@@ -162,7 +162,7 @@ func TestCreatePublicLinkSuccess(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(map[string]any{
 			"ocs": map[string]any{
-				"data": map[string]any{"url": "https://cloud.orthos.selfhost.eu/s/abc123"},
+				"data": map[string]any{"url": "https://cloud.example.com/s/abc123"},
 			},
 		})
 	}))
@@ -172,7 +172,7 @@ func TestCreatePublicLinkSuccess(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreatePublicLink() error = %v", err)
 	}
-	if url != "https://cloud.orthos.selfhost.eu/s/abc123/download" {
+	if url != "https://cloud.example.com/s/abc123/download" {
 		t.Errorf("url = %q", url)
 	}
 	if gotShareType != "3" {
@@ -194,7 +194,7 @@ func TestCreatePublicLinkSendsNoPasswordByDefault(t *testing.T) {
 		_, gotOK = r.PostForm["password"]
 		gotPassword = r.PostForm.Get("password") != ""
 		json.NewEncoder(w).Encode(map[string]any{
-			"ocs": map[string]any{"data": map[string]any{"url": "https://cloud.orthos.selfhost.eu/s/abc123"}},
+			"ocs": map[string]any{"data": map[string]any{"url": "https://cloud.example.com/s/abc123"}},
 		})
 	}))
 	defer srv.Close()
@@ -214,7 +214,7 @@ func TestCreatePublicLinkWithPasswordSendsPassword(t *testing.T) {
 		r.ParseForm()
 		gotPassword = r.PostForm.Get("password")
 		json.NewEncoder(w).Encode(map[string]any{
-			"ocs": map[string]any{"data": map[string]any{"url": "https://cloud.orthos.selfhost.eu/s/abc123"}},
+			"ocs": map[string]any{"data": map[string]any{"url": "https://cloud.example.com/s/abc123"}},
 		})
 	}))
 	defer srv.Close()
@@ -234,7 +234,7 @@ func TestCreatePublicLinkSetsExpireDate(t *testing.T) {
 		r.ParseForm()
 		gotExpire = r.PostForm.Get("expireDate")
 		json.NewEncoder(w).Encode(map[string]any{
-			"ocs": map[string]any{"data": map[string]any{"url": "https://cloud.orthos.selfhost.eu/s/abc123"}},
+			"ocs": map[string]any{"data": map[string]any{"url": "https://cloud.example.com/s/abc123"}},
 		})
 	}))
 	defer srv.Close()
@@ -255,7 +255,7 @@ func TestCreatePublicLinkRespectsCustomExpireDays(t *testing.T) {
 		r.ParseForm()
 		gotExpire = r.PostForm.Get("expireDate")
 		json.NewEncoder(w).Encode(map[string]any{
-			"ocs": map[string]any{"data": map[string]any{"url": "https://cloud.orthos.selfhost.eu/s/abc123"}},
+			"ocs": map[string]any{"data": map[string]any{"url": "https://cloud.example.com/s/abc123"}},
 		})
 	}))
 	defer srv.Close()

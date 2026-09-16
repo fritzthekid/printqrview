@@ -7,8 +7,8 @@ import (
 
 func TestFromEnvReadsAllFields(t *testing.T) {
 	env := map[string]string{
-		"NC_BASE_URL":   "https://cloud.orthos.selfhost.eu/",
-		"NC_USERNAME":   "printer",
+		"NC_BASE_URL":   "https://cloud.example.com/",
+		"NC_USERNAME":   "change-cloud-user",
 		"NC_PASSWORD":   "app-token",
 		"NC_TARGET_DIR": "/Drucke",
 	}
@@ -16,10 +16,10 @@ func TestFromEnvReadsAllFields(t *testing.T) {
 	if err != nil {
 		t.Fatalf("FromEnv() error = %v", err)
 	}
-	if cfg.BaseURL != "https://cloud.orthos.selfhost.eu" {
+	if cfg.BaseURL != "https://cloud.example.com" {
 		t.Errorf("BaseURL = %q, want trailing slash removed", cfg.BaseURL)
 	}
-	if cfg.Username != "printer" || cfg.Password != "app-token" {
+	if cfg.Username != "change-cloud-user" || cfg.Password != "app-token" {
 		t.Errorf("unexpected credentials: %+v", cfg)
 	}
 	if cfg.TargetDir != "/Drucke" {
@@ -30,7 +30,7 @@ func TestFromEnvReadsAllFields(t *testing.T) {
 func TestFromEnvUsesDefaultTargetDir(t *testing.T) {
 	env := map[string]string{
 		"NC_BASE_URL": "https://cloud.example.com",
-		"NC_USERNAME": "printer",
+		"NC_USERNAME": "change-cloud-user",
 		"NC_PASSWORD": "app-token",
 	}
 	cfg, err := FromEnv(env)
@@ -45,7 +45,7 @@ func TestFromEnvUsesDefaultTargetDir(t *testing.T) {
 func TestFromEnvUsesDefaultLinkExpireDays(t *testing.T) {
 	env := map[string]string{
 		"NC_BASE_URL": "https://cloud.example.com",
-		"NC_USERNAME": "printer",
+		"NC_USERNAME": "change-cloud-user",
 		"NC_PASSWORD": "app-token",
 	}
 	cfg, err := FromEnv(env)
@@ -60,7 +60,7 @@ func TestFromEnvUsesDefaultLinkExpireDays(t *testing.T) {
 func TestFromEnvReadsCustomLinkExpireDays(t *testing.T) {
 	env := map[string]string{
 		"NC_BASE_URL":         "https://cloud.example.com",
-		"NC_USERNAME":         "printer",
+		"NC_USERNAME":         "change-cloud-user",
 		"NC_PASSWORD":         "app-token",
 		"NC_LINK_EXPIRE_DAYS": "7",
 	}
@@ -76,7 +76,7 @@ func TestFromEnvReadsCustomLinkExpireDays(t *testing.T) {
 func TestFromEnvRaisesOnMissingRequiredVar(t *testing.T) {
 	base := map[string]string{
 		"NC_BASE_URL": "https://cloud.example.com",
-		"NC_USERNAME": "printer",
+		"NC_USERNAME": "change-cloud-user",
 		"NC_PASSWORD": "app-token",
 	}
 	for _, missingKey := range []string{"NC_BASE_URL", "NC_USERNAME", "NC_PASSWORD"} {

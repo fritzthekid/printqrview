@@ -65,7 +65,7 @@ isoliert):
 ```bash
 cat > ~/webshare.env <<'ENV'
 export NC_BASE_URL=https://cloud.example.com
-export NC_USERNAME=printer
+export NC_USERNAME=change-cloud-user
 export NC_PASSWORD=<app-passwort>
 export WEBSHARE_TOKEN=<mit "openssl rand -hex 24" erzeugen>
 export WEBSHARE_LISTEN=127.0.0.1:8642
