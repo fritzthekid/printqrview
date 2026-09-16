@@ -66,7 +66,11 @@ Wie im Original sollte möglichst viel Code wiederverwendet werden. Als Programm
 - Druckertreiber-Mechanismus: **zweiter, eigener Drucker mit dem vorhandenen
   Inbox-Treiber "Microsoft Print To PDF"** - der originale Drucker "Microsoft
   Print to PDF" bleibt unverändert (anderer Name, eigener Port, keine
-  Registry-/Treiber-Änderung an ihm).
+  Registry-/Treiber-Änderung an ihm). **Live in der Windows-10-VM
+  verifiziert** (2026-09-16): Druck über den neuen Drucker "CloudWeb" erzeugt
+  ohne jeden Dialog `C:\ProgramData\printtoqrview\incoming.pdf`;
+  `Get-Printer` zeigt anschließend weiterhin unverändert "Microsoft Print to
+  PDF" (`PORTPROMPT:`) parallel zu "CloudWeb" (fixer Datei-Port).
   - Der Original-Drucker nutzt den Spezial-Port `PORTPROMPT:`, der bei jedem
     Druck den "Speichern unter"-Dialog öffnet - deshalb kann/darf er nicht
     wiederverwendet werden.
