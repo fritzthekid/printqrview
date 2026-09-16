@@ -62,6 +62,21 @@ Wie im Original sollte möglichst viel Code wiederverwendet werden. Als Programm
   schlankes Go-Paket für den Windows-Service-Control-Manager-Handshake) direkt im
   Binary - keine andere Sprache, kein externer Wrapper wie NSSM nötig. Damit
   funktionieren `New-Service`/`Start-Service`/`Get-Service` wie vorgesehen.
+  **Implementiert** in `cmd/cloudweb/service_windows.go`
+  (`cmd/cloudweb/service_other.go` hält das Linux/macOS-Verhalten
+  unverändert); per Build-Tag getrennt, kein Einfluss auf den bestehenden
+  Linux-Build (`go build ./...` unter Linux weiterhin unverändert grün).
+  Läuft `cloudweb.exe` interaktiv (nicht als registrierter Dienst,
+  `svc.IsWindowsService()` erkennt das), startet es Server + Watcher
+  trotzdem direkt blockierend - erleichtert das Testen ohne
+  Dienst-Neuregistrierung bei jeder Änderung.
+
+- Konfigurationsdatei (Windows-Äquivalent zu `EnvironmentFile=` unter
+  systemd): `C:\ProgramData\printtoqrview\backend.env`, KEY=VALUE-Format wie
+  unter Linux. Da `New-Service` keine Umgebungsdatei kennt, liest
+  `cloudweb.exe` sie beim Start selbst ein (`internal/envfile`, neues
+  plattformneutrales Paket mit Windows-/Linux-Default-Pfad per Build-Tag -
+  unter Linux ein No-op, dort bleibt systemd zuständig).
 
 - Druckertreiber-Mechanismus: **zweiter, eigener Drucker mit dem vorhandenen
   Inbox-Treiber "Microsoft Print To PDF"** - der originale Drucker "Microsoft
@@ -86,24 +101,37 @@ Wie im Original sollte möglichst viel Code wiederverwendet werden. Als Programm
     Add-Printer -Name "CloudWeb" -DriverName "Microsoft Print To PDF" `
       -PortName "C:\ProgramData\printtoqrview\incoming.pdf"
     ```
-  - Der Windows-Dienst enthält einen Ordner-Watcher (`fsnotify` o. ä.) auf
-    diese feste Datei; bei Änderung wird sie **sofort atomar umbenannt** (auf
-    einen Zeitstempel-Dateinamen im selben Verzeichnis) und danach wie beim
-    Linux-Backend weiterverarbeitet (Upload, Freigabelink, QR-Code, Push an
-    `cloudweb`). Die sofortige Umbenennung verhindert, dass ein zweiter,
-    schnell nacheinander gestarteter Druckauftrag die Datei überschreibt,
-    bevor sie verarbeitet wurde.
-  - Für die `share-to-web`-Variante (SendTo, mit Name-Abfrage) wird derselbe
-    Drucker `CloudWeb` genutzt: das SendTo-Skript ruft `Start-Process -Verb
-    RunAs`-frei einfach `Out-Printer`/den passenden Druckbefehl mit
-    `-PrinterName CloudWeb` auf, nachdem es den optionalen `Name` interaktiv
-    abgefragt hat (z. B. per einfachem WinForms-Eingabedialog oder
-    `Read-Host` in einem sichtbaren Konsolenfenster). Die Übergabe des
-    `Name`-Parameters an den Watcher erfolgt - da CUPS-Job-Optionen unter
-    Windows fehlen - über eine kleine Sidecar-Datei (z. B.
-    `incoming.pdf.name`, vom SendTo-Skript direkt neben die PDF-Datei
-    geschrieben, bevor gedruckt wird; der Watcher liest sie beim Verarbeiten
-    und löscht sie danach).
+  - Der Windows-Dienst (`cloudweb.exe`, siehe unten) enthält einen
+    Ordner-Watcher (einfaches 1s-Polling per `time.Ticker`, bewusst ohne
+    zusätzliche Abhängigkeit wie `fsnotify` - bei einer einzelnen fest
+    benannten Datei reicht das für den Anwendungsfall völlig) auf diese
+    feste Datei; bei Änderung wird sie **sofort atomar umbenannt** (auf
+    einen Zeitstempel-Dateinamen im selben Verzeichnis, `os.Rename`) und
+    danach wie beim Linux-Backend weiterverarbeitet (Upload, Freigabelink,
+    QR-Code, direktes Aktualisieren der Anzeige - kein Push per HTTP nötig,
+    da Watcher und Anzeige-Server im selben Prozess laufen). Die sofortige
+    Umbenennung verhindert, dass ein zweiter, schnell nacheinander
+    gestarteter Druckauftrag die Datei überschreibt, bevor sie verarbeitet
+    wurde. **Implementiert** in `cmd/cloudweb/watcher_windows.go`.
+  - **`cmd/backend` (das CUPS-Backend) ist unter Windows kein eigenständiges
+    Programm** - es gibt kein Windows-Äquivalent zum CUPS-Backend-Aufruf
+    (`job-id user title copies options [file]`), das Windows beim Drucken
+    automatisch ausführen würde. Seine Rolle (Upload + Freigabelink +
+    QR-Code nach einem Druckauftrag) übernimmt stattdessen direkt der
+    Ordner-Watcher in `cloudweb.exe` (siehe oben).
+  - Für `share-to-web` (SendTo mit Name-Abfrage) **kein Umweg über den
+    Drucker**: `cmd/fileshare` (neues Kommando, für Windows gedacht, baut
+    aber auf denselben plattformneutralen internen Paketen auf) lädt die
+    per Explorer ausgewählte Datei direkt selbst hoch (wie
+    `scripts/share-to-web.sh`), fragt dazu - falls nicht als zweites
+    Argument übergeben - interaktiv auf der Konsole nach dem optionalen
+    `Name`, leitet bei nicht-leerem Namen Crypt+Passwort exakt wie
+    `cmd/backend` ab (`internal/sharepassword`, MAC-Adresse + Remote-Pfad
+    als stiller zweiter Faktor) und pusht das Ergebnis anschließend per
+    `POST /push` an den laufenden Dienst `CloudWeb` - protokollkompatibel zu
+    `scripts/push-to-cloudweb.sh` (dieselben Formularfelder `file`, `link`,
+    `password`). Als Explorer-"Senden an"-Eintrag eingerichtet (siehe
+    `deploy/windows/install.ps1`).
 
 <!--
 Dinge, die schon feststehen: Sprache, welche Komponente etwas übernimmt,

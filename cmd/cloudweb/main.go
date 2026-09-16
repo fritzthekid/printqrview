@@ -11,12 +11,13 @@ import (
 	_ "embed"
 	"encoding/json"
 	"io"
-	"log"
 	"net"
 	"net/http"
 	"os"
 	"sync"
 	"time"
+
+	"github.com/fritzthekid/printqrview/internal/envfile"
 )
 
 //go:embed static/index.html
@@ -138,12 +139,19 @@ func newMux(st *state) *http.ServeMux {
 }
 
 func main() {
+	if err := envfile.LoadDefault(); err != nil {
+		// Fehlt die Datei, ist LoadDefault() bereits ein No-op (nil); ein
+		// Fehler hier bedeutet, die Datei existiert, ist aber kaputt - das
+		// soll aber die reine Anzeigefunktion nicht verhindern, deshalb nur
+		// eine Warnung statt eines Abbruchs.
+		println("WARNUNG: Konfigurationsdatei konnte nicht geladen werden:", err.Error())
+	}
+
 	addr := os.Getenv("CLOUDWEB_LISTEN")
 	if addr == "" {
 		addr = ":40080"
 	}
 
-	mux := newMux(&state{})
-	log.Printf("cloudweb hört auf %s", addr)
-	log.Fatal(http.ListenAndServe(addr, mux))
+	st := &state{}
+	runService(st, newMux(st), addr)
 }
