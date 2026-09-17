@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Test
+        run: go test ./...
+
+      - name: Build (Linux-Binaries, siehe README)
+        run: |
+          go build -o backend ./cmd/backend
+          go build -o sendfile ./cmd/sendfile
+          go build -o webshare ./cmd/webshare
+          go build -o cloudweb ./cmd/cloudweb
+          go build -o fileshare ./cmd/fileshare
+
+      - name: install.sh Syntaxcheck
+        run: |
+          bash -n deploy/install.sh
+          bash -n deploy/nextcloud-backend-wrapper.sh
+
+  windows-build:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Windows-Cross-Compile (siehe doc/anforderung_windows.md)
+        run: ./deploy/windows/build.sh
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cloudweb-windows
+          path: dist/windows/cloudweb.zip
