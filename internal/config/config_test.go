@@ -73,6 +73,49 @@ func TestFromEnvReadsCustomLinkExpireDays(t *testing.T) {
 	}
 }
 
+func TestFromEnvUsesDefaultLenCode(t *testing.T) {
+	env := map[string]string{
+		"NC_BASE_URL": "https://cloud.example.com",
+		"NC_USERNAME": "change-cloud-user",
+		"NC_PASSWORD": "app-token",
+	}
+	cfg, err := FromEnv(env)
+	if err != nil {
+		t.Fatalf("FromEnv() error = %v", err)
+	}
+	if cfg.LenCode != 15 {
+		t.Errorf("LenCode = %d, want 15 (sharepassword.DefaultLength)", cfg.LenCode)
+	}
+}
+
+func TestFromEnvReadsCustomLenCode(t *testing.T) {
+	env := map[string]string{
+		"NC_BASE_URL": "https://cloud.example.com",
+		"NC_USERNAME": "change-cloud-user",
+		"NC_PASSWORD": "app-token",
+		"NC_LEN_CODE": "20",
+	}
+	cfg, err := FromEnv(env)
+	if err != nil {
+		t.Fatalf("FromEnv() error = %v", err)
+	}
+	if cfg.LenCode != 20 {
+		t.Errorf("LenCode = %d, want 20", cfg.LenCode)
+	}
+}
+
+func TestFromEnvRejectsInvalidLenCode(t *testing.T) {
+	env := map[string]string{
+		"NC_BASE_URL": "https://cloud.example.com",
+		"NC_USERNAME": "change-cloud-user",
+		"NC_PASSWORD": "app-token",
+		"NC_LEN_CODE": "nicht-numerisch",
+	}
+	if _, err := FromEnv(env); err == nil {
+		t.Fatal("FromEnv() mit ungültigem NC_LEN_CODE: erwarteter Fehler blieb aus")
+	}
+}
+
 func TestFromEnvRaisesOnMissingRequiredVar(t *testing.T) {
 	base := map[string]string{
 		"NC_BASE_URL": "https://cloud.example.com",

@@ -44,6 +44,11 @@
     max-width: 420px;
     width: 100%;
   }
+  #hint {
+    font-size: 0.85rem;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
   #qr {
     width: 100%;
     max-width: 320px;
@@ -65,10 +70,15 @@
   }
   #password {
     font-size: 0.95rem;
-    color: var(--muted);
     margin-bottom: 8px;
   }
   #password.hidden { display: none; }
+  #password .code {
+    font-weight: 600;
+  }
+  #password .hint {
+    color: var(--muted);
+  }
   #age {
     font-size: 0.8rem;
     color: var(--muted);
@@ -77,6 +87,7 @@
 </head>
 <body>
 <main class="card">
+  <div id="hint">Link scannen (oder eintippen)</div>
   <div id="qr"><div class="placeholder">Warte auf den nächsten Druck …</div></div>
   <div id="link"></div>
   <div id="password" class="hidden"></div>
@@ -112,7 +123,9 @@
           }
           linkDiv.textContent = data.link || '';
           if (data.password) {
-            passwordDiv.textContent = 'Passwort: ' + data.password;
+            passwordDiv.innerHTML =
+              '<div class="code">CODE: ' + data.password + '</div>' +
+              '<div class="hint">Als Passwort bei Download verwenden: &quot;Nachname' + data.password + '&quot;</div>';
             passwordDiv.classList.remove('hidden');
           } else {
             passwordDiv.classList.add('hidden');

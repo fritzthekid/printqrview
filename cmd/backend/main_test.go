@@ -209,14 +209,50 @@ func TestPasswordSeedFromOptionsDerivesPassword(t *testing.T) {
 	if rc != 0 {
 		t.Fatalf("rc = %d, want 0", rc)
 	}
-	if gotCrypt != "XZTT7HL7VOAWOEW7" {
-		t.Errorf("an out()/crypt übergebenes Passwort = %q, want %q", gotCrypt, "XZTT7HL7VOAWOEW7")
+	// crypt jetzt in Fünfer-Gruppen (siehe internal/sharepassword.FormatGroups)
+	// und mit der neuen Default-Länge NC_LEN_CODE=15 (testCfg setzt LenCode
+	// nicht, Derive fällt daher auf sharepassword.DefaultLength zurück).
+	if gotCrypt != "XZTT7-HL7VO-AWOEW" {
+		t.Errorf("an out()/crypt übergebenes Passwort = %q, want %q", gotCrypt, "XZTT7-HL7VO-AWOEW")
 	}
 	// password darf NUR aus name+crypt bestehen (nicht dem erweiterten
 	// hardenedSeed), sonst kann der Empfänger es nie korrekt eintippen -
 	// genau dieser Bug wurde live beobachtet und hier fixiert.
-	if gotPassword != "usernameXZTT7HL7VOAWOEW7" {
-		t.Errorf("an createPublicLink übergebenes Passwort = %q, want %q", gotPassword, "usernameXZTT7HL7VOAWOEW7")
+	if gotPassword != "usernameXZTT7-HL7VO-AWOEW" {
+		t.Errorf("an createPublicLink übergebenes Passwort = %q, want %q", gotPassword, "usernameXZTT7-HL7VO-AWOEW")
+	}
+}
+
+func TestPasswordSeedRespectsConfiguredLenCode(t *testing.T) {
+	origMAC := localMAC
+	localMAC = func() (string, error) { return "mac", nil }
+	defer func() { localMAC = origMAC }()
+
+	defer withFakes(
+		func(data []byte, filename string, cfg *config.Config) (string, error) {
+			return "/PrinterUploads/x.zip", nil
+		},
+		func(remotePath string, cfg *config.Config, password string) (string, error) {
+			return "https://cloud.example.com/s/xyz", nil
+		},
+	)()
+
+	cfgWithLenCode := *testCfg
+	cfgWithLenCode.LenCode = 10
+
+	var gotCrypt string
+	argvWithSeed := []string{"backend", "42", "alice", "testdata.zip", "1", "nc-password-seed=username"}
+	rc := run(argvWithSeed, &cfgWithLenCode, func(link, password string) error {
+		gotCrypt = password
+		return nil
+	}, strings.NewReader("PK\x03\x04 zip-content"))
+
+	if rc != 0 {
+		t.Fatalf("rc = %d, want 0", rc)
+	}
+	rawLen := len(strings.ReplaceAll(gotCrypt, "-", ""))
+	if rawLen != 10 {
+		t.Errorf("crypt-Länge (ohne Bindestriche) = %d, want NC_LEN_CODE = 10 (crypt = %q)", rawLen, gotCrypt)
 	}
 }
 

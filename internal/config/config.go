@@ -7,6 +7,8 @@ import (
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/fritzthekid/printqrview/internal/sharepassword"
 )
 
 type Config struct {
@@ -15,6 +17,7 @@ type Config struct {
 	Password       string
 	TargetDir      string
 	LinkExpireDays int
+	LenCode        int
 }
 
 // FromEnv baut die Config aus env. Ist env nil, wird os.Environ verwendet.
@@ -55,11 +58,21 @@ func FromEnv(env map[string]string) (*Config, error) {
 		expireDays = n
 	}
 
+	lenCode := sharepassword.DefaultLength
+	if v, ok := lookup("NC_LEN_CODE"); ok {
+		n, err := strconv.Atoi(v)
+		if err != nil {
+			return nil, fmt.Errorf("Ungültiger Wert für NC_LEN_CODE: %q", v)
+		}
+		lenCode = n
+	}
+
 	return &Config{
 		BaseURL:        strings.TrimRight(values["NC_BASE_URL"], "/"),
 		Username:       values["NC_USERNAME"],
 		Password:       values["NC_PASSWORD"],
 		TargetDir:      targetDir,
 		LinkExpireDays: expireDays,
+		LenCode:        lenCode,
 	}, nil
 }

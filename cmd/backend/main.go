@@ -145,7 +145,7 @@ func doRun(argv []string, jobTitle string, cfg *config.Config, stdin io.Reader) 
 		if macErr != nil {
 			return "", "", fmt.Errorf("Passwort-Ableitung fehlgeschlagen (MAC-Adresse): %w", macErr)
 		}
-		crypt, password = sharepassword.Derive(seed, seed+mac+remotePath)
+		crypt, password = sharepassword.Derive(seed, seed+mac+remotePath, cfg.LenCode)
 	}
 
 	link, err = createPublicLink(remotePath, cfg, password)
