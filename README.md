@@ -38,9 +38,18 @@ PDF vor – wir müssen also keine PostScript/PCL-Interpretation selbst machen.
 ## Bauen
 
 ```bash
+deploy/build.sh
+```
+
+Baut `backend`, `sendfile`, `webshare` und `cloudweb` in einem Schritt
+(vermeidet, dass `install.sh` versehentlich eine veraltete Binary
+installiert, weil eine davon vergessen wurde). Einzeln geht's auch:
+
+```bash
 go build -o backend ./cmd/backend
 go build -o sendfile ./cmd/sendfile
 go build -o webshare ./cmd/webshare
+go build -o cloudweb ./cmd/cloudweb
 ```
 
 ## Lokal testen
@@ -116,7 +125,7 @@ läuft:
 Installation:
 
 ```bash
-go build -o backend ./cmd/backend
+deploy/build.sh
 sudo ./deploy/install.sh
 # ggf. Zugangsdaten nachtragen:
 sudo "$EDITOR" /etc/printtoqrview/backend.env

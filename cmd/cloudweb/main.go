@@ -124,6 +124,10 @@ func newMux(st *state) *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		// Ohne diesen Header behält der Browser eine einmal geladene Seite
+		// unbegrenzt im Cache - ein Deploy einer neuen cloudweb-Version zeigt
+		// sich dann nur nach manuellem Hard-Reload (live so beobachtet).
+		w.Header().Set("Cache-Control", "no-store")
 		_, _ = w.Write(indexHTML)
 	})
 	mux.HandleFunc("POST /push", func(w http.ResponseWriter, r *http.Request) {
