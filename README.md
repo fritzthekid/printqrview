@@ -169,10 +169,19 @@ eingerichteter Warteschlange (s. o.) - `sendfile` bleibt deshalb die
 unabhängige Variante (kein CUPS nötig), z. B. als Grundlage für `webshare`
 und `web/share.html`.
 
-`scripts/share-zip.sh` ist dieselbe Kurzform mit `PRINTER=CloudWeb` fest
-voreingestellt (Ergebnis erscheint im Browser statt auf dem Pi) - trotz des
-Namens nicht auf ZIP-Dateien beschränkt, `share.sh`/das Backend sind
-generisch.
+`scripts/share-to-web.sh` ist dieselbe Kurzform mit `PRINTER=CloudWeb` fest
+voreingestellt (Ergebnis erscheint im Browser statt auf dem Pi). Ihr
+zweiter Parameter ist - anders als bei `share.sh` - **kein Titel**,
+sondern ein optionaler Name, der als Grundlage für ein zusätzliches
+Freigabe-Passwort dient (`-o nc-password-seed=<name>`, siehe
+`internal/sharepassword`):
+
+```bash
+scripts/share-to-web.sh pfad/zu/test.zip           # ohne Passwortschutz
+scripts/share-to-web.sh pfad/zu/test.zip Nachname  # mit Passwortschutz
+```
+
+Ohne `name`-Argument bleibt die Freigabe wie bei `share.sh` unpassphrasegeschützt.
 
 ## Ausgabe auf einem externen Display (optional)
 
