@@ -302,3 +302,17 @@ Nextcloud-Zugangsdaten füllen (Werte **ohne** Anführungszeichen - weder
 `internal/envfile` noch systemds `EnvironmentFile=` unter Linux entfernen
 sie, sie wären sonst wörtlicher Bestandteil des Werts) und
 `Restart-Service CloudWeb`.
+
+## Lizenz
+
+GNU Affero General Public License v3.0 (or later) - siehe [`LICENSE`](LICENSE).
+
+Insbesondere für `cmd/cloudweb` und `cmd/webshare` relevant: wer eine
+veränderte Version dieses Projekts als Netzwerkdienst betreibt, mit dem
+Dritte interagieren (z. B. wer den QR-Code scannt oder vom Handy hochlädt),
+muss diesen Nutzern - anders als bei der einfachen GPL - Zugang zum
+Quellcode der laufenden Version anbieten (AGPL §13).
+
+Enthaltene Drittanbieter-Bibliotheken (jeweils permissiv lizenziert) sind
+in [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) mit vollständigem
+Lizenztext aufgeführt.
